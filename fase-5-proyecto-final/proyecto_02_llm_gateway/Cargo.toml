@@ -2,6 +2,7 @@
 name = "proyecto_02_llm_gateway"
 version = "0.1.0"
 edition = "2024"
+default-run = "proyecto_02_llm_gateway"
 
 [dependencies]
 async-stream = "0.3.6"
