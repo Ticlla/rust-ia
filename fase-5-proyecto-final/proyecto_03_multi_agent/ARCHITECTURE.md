@@ -161,6 +161,11 @@ Para evitar bloqueos por dependencias circulares:
 ### 5.2 Propagación de Contexto entre Tareas
 El método `get_dependency_outputs(task_id)` extrae automáticamente las salidas generadas por los nodos padre y las inyecta en el prompt de la tarea dependiente, garantizando que el `Coder` reciba la investigación y el `Reviewer` reciba el código generado.
 
+### 5.3 Enrutador de Intenciones (Intent Routing: Diálogo Conversacional vs. Tarea Técnica)
+Para evitar la sobrecarga innecesaria del grafo multi-agente en interacciones casuales (saludos, preguntas de identidad, agradecimientos), el [`SupervisorOrchestrator`](file:///home/alcidesticlla/Documents/rust-ia/fase-5-proyecto-final/proyecto_03_multi_agent/src/orchestrator/supervisor.rs) implementa clasificación de intención:
+* **`UserIntent::Conversational`**: Atiende la solicitud en **< 1 ms** directamente a través del asistente conversacional, sin invocar el pipeline de codificación ni forzar la generación de sintaxis Rust innecesaria.
+* **`UserIntent::TechnicalTask`**: Activa el DAG completo con orquestación de actores (`Researcher` $\to$ `Coder` $\to$ `Reviewer`), validación de herramientas y ciclo de consenso.
+
 ---
 
 ## 6. Bucle de Consenso y Auditoría
