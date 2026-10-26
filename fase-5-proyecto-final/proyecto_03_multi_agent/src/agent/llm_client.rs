@@ -398,7 +398,7 @@ impl LlmBackend for GatewayLlmBackend {
             "model": self.model,
             "messages": messages,
             "temperature": 0.2,
-            "max_tokens": 512,
+            "max_tokens": 96,
             "stream": false
         });
 
