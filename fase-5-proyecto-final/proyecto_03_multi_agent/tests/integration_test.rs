@@ -234,3 +234,43 @@ async fn test_axum_api_and_sse_streaming() {
     assert_eq!(run_result["status"], "completed");
     assert!(run_result["report"]["success"].as_bool().unwrap());
 }
+
+// ---------------------------------------------------------------------------
+// TEST 6: Enrutador de Intenciones (Intent Routing) Conversacional vs Técnico
+// ---------------------------------------------------------------------------
+#[tokio::test]
+async fn test_intent_routing_conversational_vs_technical() {
+    use proyecto_03_multi_agent::orchestrator::supervisor::UserIntent;
+    use proyecto_03_multi_agent::orchestrator::SupervisorOrchestrator;
+
+    // 1. Pruebas de clasificación conversacional
+    assert_eq!(SupervisorOrchestrator::classify_intent("hola"), UserIntent::Conversational);
+    assert_eq!(SupervisorOrchestrator::classify_intent("hi"), UserIntent::Conversational);
+    assert_eq!(SupervisorOrchestrator::classify_intent("¿Quién eres?"), UserIntent::Conversational);
+    assert_eq!(SupervisorOrchestrator::classify_intent("how are you?"), UserIntent::Conversational);
+
+    // 2. Pruebas de clasificación de tarea técnica
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("Crear un RingBuffer en Rust"),
+        UserIntent::TechnicalTask
+    );
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("make me an hello world rust"),
+        UserIntent::TechnicalTask
+    );
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("módulo SIMD AVX2 de producto punto"),
+        UserIntent::TechnicalTask
+    );
+
+    // 3. Ejecución de flujo conversacional de punta a punta
+    let (orchestrator, _) = create_default_system();
+    let report = orchestrator
+        .run_workflow("wf-chat-01", "Hola, ¿quién eres?")
+        .await
+        .unwrap();
+
+    assert!(report.success);
+    assert!(report.generated_code.is_none()); // No se forzó generación de código
+    assert!(report.final_synthesis.contains("Supervisor") || report.final_synthesis.contains("Hola"));
+}

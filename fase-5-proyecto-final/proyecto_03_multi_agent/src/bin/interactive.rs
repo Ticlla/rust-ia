@@ -137,6 +137,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("\x1b[1;36m================================================================================\x1b[0m");
                 if let Some(code) = &report.generated_code {
                     println!("\x1b[1;33m[CÓDIGO RUST GENERADO Y AUDITADO]:\x1b[0m\n{}\n", code);
+                } else {
+                    println!("\x1b[1;32m💬 [RESPUESTA CONVERSACIONAL DEL ASISTENTE]:\x1b[0m\n{}\n", report.final_synthesis);
                 }
                 println!("\x1b[2mLatencia total: {:?}\x1b[0m\n", start.elapsed());
             }

@@ -29,8 +29,11 @@ impl Default for GatewayConfig {
     fn default() -> Self {
         Self {
             host: "0.0.0.0".to_string(),
-            port: 8000,
-            model_id: "rust-vllm-mini".to_string(),
+            port: std::env::var("PORT")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(8081),
+            model_id: "smollm2-135m".to_string(),
             embed_dim: 32,
             n_heads: 4,
             n_layers: 2,

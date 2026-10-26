@@ -1,11 +1,22 @@
-//! Supervisor y Orquestador Multi-Agente con Grafo de Tareas y Bucle de Consenso.
+//! Supervisor y Orquestador Multi-Agente con Enrutador de Intenciones (Intent Router),
+//! Grafo de Tareas Acíclico Dirigido (DAG) y Bucle de Consenso.
 
 use super::actor::AgentActorHandle;
 use super::dag::{TaskGraph, TaskNode};
-use crate::agent::AgentRole;
+use crate::agent::{AgentContext, AgentMessage, AgentRole, LlmBackend, LlmDecision};
 use crate::events::{AgentEvent, EventBus};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::Instant;
+
+/// Tipo de intención clasificada por el Supervisor al recibir la entrada del usuario.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UserIntent {
+    /// Diálogo general, saludos, preguntas de cortesía o consultas directas sin generación de código.
+    Conversational,
+    /// Tarea técnica de ingeniería que requiere investigación, diseño de código y auditoría con consenso.
+    TechnicalTask,
+}
 
 /// Reporte final estructurado generado por la orquestación multi-agente.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +37,7 @@ pub struct SupervisorOrchestrator {
     coder: AgentActorHandle,
     reviewer: AgentActorHandle,
     event_bus: EventBus,
+    llm: Option<Arc<dyn LlmBackend>>,
 }
 
 impl SupervisorOrchestrator {
@@ -41,6 +53,111 @@ impl SupervisorOrchestrator {
             coder,
             reviewer,
             event_bus,
+            llm: None,
+        }
+    }
+
+    /// Adjunta un backend de LLM para permitir diálogo conversacional directo.
+    pub fn with_llm(mut self, llm: Arc<dyn LlmBackend>) -> Self {
+        self.llm = Some(llm);
+        self
+    }
+
+    /// Clasifica si la solicitud del usuario es una conversación general o una tarea técnica de ingeniería.
+    pub fn classify_intent(goal: &str) -> UserIntent {
+        let cleaned = goal.trim().to_lowercase();
+
+        // 1. Frases y saludos conversacionales explícitos
+        let conversational_prefixes = [
+            "hola", "hi", "hello", "hey", "buenos dias", "buenas tardes", "buenas noches",
+            "saludos", "como estas", "how are you", "que tal", "whats up", "what's up",
+            "quien eres", "who are you", "que eres", "que haces", "what can you do",
+            "gracias", "thanks", "thank you", "chao", "bye", "adios", "ayuda", "help",
+            "buen dia", "good morning", "good evening",
+        ];
+
+        for prefix in &conversational_prefixes {
+            if cleaned == *prefix
+                || cleaned.starts_with(&format!("{prefix} "))
+                || cleaned.starts_with(&format!("{prefix},"))
+                || cleaned.starts_with(&format!("{prefix}!"))
+                || cleaned.starts_with(&format!("{prefix}?"))
+            {
+                // Si la frase además contiene palabras de acción técnica fuerte ("crear", "diseñar", "implementar", "code")
+                // por ejemplo "Hola, crea un buffer", se prioriza la tarea técnica.
+                let has_code_action = [
+                    "crea ", "crear ", "diseña ", "diseñar ", "implementa ", "implementar ",
+                    "escribe ", "escribir ", "make ", "build ", "code ", "implement ",
+                ]
+                .iter()
+                .any(|&act| cleaned.contains(act));
+
+                if !has_code_action {
+                    return UserIntent::Conversational;
+                }
+            }
+        }
+
+        // 2. Palabras clave técnicas de Rust e IA
+        let technical_keywords = [
+            "rust", "code", "codigo", "código", "struct", "impl", "trait", "buffer", "cache",
+            "caché", "simd", "avx", "ring", "ringbuffer", "mutex", "canal", "channel",
+            "thread", "concurren", "lru", "algoritmo", "crear", "diseñar", "implementar",
+            "escribir", "make", "build", "create", "design", "write", "programar", "desarrollar",
+            "modulo", "módulo", "libreria", "librería", "funcion", "función", "calcula",
+            "calcular", "+", "*", "/", "%", "hello world",
+        ];
+
+        let has_technical = technical_keywords.iter().any(|&kw| cleaned.contains(kw));
+        if has_technical {
+            return UserIntent::TechnicalTask;
+        }
+
+        // 3. Frases cortas sin contexto técnico (< 4 palabras) se tratan como conversación
+        let word_count = cleaned.split_whitespace().count();
+        if word_count <= 4 {
+            return UserIntent::Conversational;
+        }
+
+        UserIntent::TechnicalTask
+    }
+
+    /// Maneja interacciones conversacionales de forma directa.
+    async fn handle_conversational(&self, goal: &str) -> String {
+        if let Some(llm) = &self.llm {
+            let mut context = AgentContext::new(
+                AgentRole::Supervisor,
+                "Eres un Asistente de IA y Supervisor de un sistema multi-agente en Rust. Responde al usuario de forma amigable, concisa y servicial. Explica brevemente que cuentas con un equipo de especialistas (Investigador RAG, Programador Rust y Auditor de Código) listo para construir software de alto rendimiento.",
+            );
+            context.add_message(AgentMessage::user(goal));
+            let dummy_tools = crate::tools::ToolRegistry::new();
+
+            if let Ok(decision) = llm.decide(&context, &dummy_tools).await {
+                match decision {
+                    LlmDecision::FinalAnswer { answer, .. } => return answer,
+                    LlmDecision::ToolCall { thought, .. } => return thought,
+                }
+            }
+        }
+
+        // Respuesta conversacional contextual por defecto (Modo Offline)
+        let cleaned = goal.trim().to_lowercase();
+        if cleaned.contains("quien eres") || cleaned.contains("who are you") || cleaned.contains("que eres") {
+            "¡Hola! Soy el Supervisor del Sistema Autónomo Multi-Agente en Rust puro.\n\n\
+            Coordino un equipo de agentes concurrentes basados en el Modelo de Actores de Tokio:\n\
+            - 🔬 **Investigador (Researcher):** Explora especificaciones y bases documentales RAG.\n\
+            - 💻 **Desarrollador (Coder):** Escribe algoritmos y estructuras de datos en Rust seguro.\n\
+            - ⚖️ **Auditor (Reviewer):** Valida balance de delimitadores, comentarios y ausencia de `unsafe`.\n\n\
+            Puedes conversar conmigo o pedirme diseñar cualquier componente técnico (ej. 'Diseñar un RingBuffer continuo' o 'Crear un módulo SIMD AVX2').".to_string()
+        } else if cleaned.contains("gracias") || cleaned.contains("thanks") {
+            "¡De nada! Ha sido un placer. Si necesitas construir o auditar otro componente en Rust, solo dímelo.".to_string()
+        } else {
+            format!(
+                "¡Hola! Recibí tu mensaje: \"{}\".\n\n\
+                Soy el Supervisor del framework multi-agente. Estoy listo para ayudarte tanto con consultas conversacionales como con la coordinación de tareas complejas de ingeniería en Rust.\n\
+                ¿En qué puedo ayudarte hoy?",
+                goal.trim()
+            )
         }
     }
 
@@ -72,7 +189,7 @@ impl SupervisorOrchestrator {
         graph
     }
 
-    /// Ejecuta el flujo de trabajo orquestado de principio a fin respetando dependencias del grafo.
+    /// Ejecuta el flujo de trabajo orquestado respetando la intención del usuario y dependencias del grafo.
     pub async fn run_workflow(&self, workflow_id: &str, goal: &str) -> Result<WorkflowReport, String> {
         let start_time = Instant::now();
 
@@ -82,6 +199,37 @@ impl SupervisorOrchestrator {
             timestamp_ms: start_time.elapsed().as_millis() as u64,
         });
 
+        // 1. CLASIFICACIÓN DE INTENCIÓN (Intent Routing)
+        let intent = Self::classify_intent(goal);
+
+        if intent == UserIntent::Conversational {
+            self.event_bus.publish(AgentEvent::AgentThinking {
+                agent_role: "Supervisor".to_string(),
+                thought: "Intención detectada: Diálogo conversacional. Respondiendo de forma conversacional sin requerir el ciclo de auditoría de código.".to_string(),
+            });
+
+            let conversational_response = self.handle_conversational(goal).await;
+            let total_duration_ms = start_time.elapsed().as_millis() as u64;
+
+            self.event_bus.publish(AgentEvent::WorkflowCompleted {
+                workflow_id: workflow_id.to_string(),
+                summary: conversational_response.clone(),
+                total_duration_ms,
+            });
+
+            return Ok(WorkflowReport {
+                workflow_id: workflow_id.to_string(),
+                goal: goal.to_string(),
+                success: true,
+                research_summary: None,
+                generated_code: None,
+                review_feedback: None,
+                final_synthesis: conversational_response,
+                total_duration_ms,
+            });
+        }
+
+        // 2. TAREA TÉCNICA: EJECUTAR GRAFO ACÍCLICO DIRIGIDO (DAG)
         let mut graph = self.build_standard_dag(goal);
 
         if graph.has_cycle() {

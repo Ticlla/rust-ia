@@ -63,12 +63,10 @@ pub fn create_system_with_backend(
         32,
     );
 
-    let supervisor = Arc::new(SupervisorOrchestrator::new(
-        researcher,
-        coder,
-        reviewer,
-        event_bus.clone(),
-    ));
+    let supervisor = Arc::new(
+        SupervisorOrchestrator::new(researcher, coder, reviewer, event_bus.clone())
+            .with_llm(llm_backend),
+    );
 
     (supervisor, event_bus)
 }

@@ -315,15 +315,41 @@ impl LlmBackend for DeterministicLlmBackend {
             // ---------------------------------------------------------------
             // 4. SUPERVISOR (Supervisor)
             // ---------------------------------------------------------------
-            AgentRole::Supervisor => Ok(LlmDecision::FinalAnswer {
-                thought: "He coordinado la ejecución de todos los agentes y consolidado la solución final.".into(),
-                answer: format!(
-                    "Consolidación de Solución Multi-Agente:\n\n\
-                    - Objetivo completado con éxito.\n\
-                    - Tareas ejecutadas y auditadas por el equipo de agentes.\n\
-                    - Resumen del requerimiento: {last_message}"
-                ),
-            }),
+            AgentRole::Supervisor => {
+                let msg_lower = last_message.to_lowercase();
+                let answer = if msg_lower == "hi"
+                    || msg_lower == "hola"
+                    || msg_lower == "hello"
+                    || msg_lower.starts_with("hola")
+                    || msg_lower.starts_with("hi ")
+                    || msg_lower.starts_with("hello ")
+                {
+                    "¡Hola! Soy el Asistente y Supervisor del Sistema Multi-Agente en Rust.\n\n\
+                    Cuento con un equipo autónomo de especialistas:\n\
+                    - 🔬 **Investigador (Researcher):** Explora patrones de bajo nivel y bases documentales RAG.\n\
+                    - 💻 **Desarrollador (Coder):** Diseña algoritmos y estructuras concurrentes en Rust seguro.\n\
+                    - ⚖️ **Auditor (Reviewer):** Valida ausencia de unsafe, balance sintáctico y buenas prácticas.\n\n\
+                    ¿En qué puedo ayudarte hoy? Puedes hacerme una pregunta o pedirme diseñar cualquier componente técnico (ej. 'Diseñar un RingBuffer continuo' o 'Crear un módulo SIMD AVX2').".to_string()
+                } else if msg_lower.contains("quien eres")
+                    || msg_lower.contains("who are you")
+                    || msg_lower.contains("que eres")
+                {
+                    "Soy el orquestador del framework autónomo multi-agente en Rust puro. Puedo conversar contigo directamente o coordinar a mi equipo de agentes concurrentes en Tokio para diseñar y auditar código de alta velocidad.".to_string()
+                } else if msg_lower.contains("gracias") || msg_lower.contains("thanks") {
+                    "¡Con mucho gusto! Estoy a tu disposición siempre que necesites investigar o implementar soluciones en Rust.".to_string()
+                } else {
+                    format!(
+                        "¡Hola! He recibido tu consulta: \"{}\".\n\n\
+                        Puedo responder a tus dudas directamente o coordinar a mis agentes para diseñar, codificar y auditar arquitecturas en Rust. ¿Deseas que implementemos alguna estructura técnica o prefieres consultar sobre algún tema?",
+                        last_message.trim()
+                    )
+                };
+
+                Ok(LlmDecision::FinalAnswer {
+                    thought: "Respondiendo directamente como asistente conversacional.".into(),
+                    answer,
+                })
+            }
         }
     }
 }
