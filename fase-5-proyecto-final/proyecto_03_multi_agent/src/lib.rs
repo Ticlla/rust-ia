@@ -15,8 +15,15 @@ use orchestrator::{AgentActor, SupervisorOrchestrator};
 use std::sync::Arc;
 use tools::{CalculatorTool, RagSearchTool, RustCodeValidatorTool, ToolRegistry};
 
-/// Inicializa el sistema completo de agentes con herramientas y bus de eventos.
+/// Inicializa el sistema completo de agentes con herramientas y bus de eventos usando el backend determinista.
 pub fn create_default_system() -> (Arc<SupervisorOrchestrator>, EventBus) {
+    create_system_with_backend(Arc::new(DeterministicLlmBackend))
+}
+
+/// Inicializa el sistema multi-agente con un backend de lenguaje personalizado (GatewayLlmBackend o DeterministicLlmBackend).
+pub fn create_system_with_backend(
+    llm_backend: Arc<dyn agent::LlmBackend>,
+) -> (Arc<SupervisorOrchestrator>, EventBus) {
     let event_bus = EventBus::new(1024);
 
     // Registro de herramientas compartidas
@@ -24,8 +31,6 @@ pub fn create_default_system() -> (Arc<SupervisorOrchestrator>, EventBus) {
     tools.register(Arc::new(CalculatorTool));
     tools.register(Arc::new(RagSearchTool));
     tools.register(Arc::new(RustCodeValidatorTool));
-
-    let llm_backend = Arc::new(DeterministicLlmBackend);
 
     // Spawneo de actores especializados (Modelo de Actores en Tokio)
     let researcher_engine = ReActEngine::new(llm_backend.clone(), tools.clone())

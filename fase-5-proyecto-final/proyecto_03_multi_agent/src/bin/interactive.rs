@@ -1,8 +1,10 @@
 //! Modo Interactivo (REPL) para el Autonomous Multi-Agent Orchestration Framework.
 
-use proyecto_03_multi_agent::create_default_system;
+use proyecto_03_multi_agent::agent::GatewayLlmBackend;
 use proyecto_03_multi_agent::events::AgentEvent;
+use proyecto_03_multi_agent::{create_default_system, create_system_with_backend};
 use std::io::{self, Write};
+use std::sync::Arc;
 use std::time::Instant;
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -16,10 +18,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("    \x1b[1;33m:tools\x1b[0m    - Muestra las herramientas registradas en el Sandbox");
     println!("    \x1b[1;33m:clear\x1b[0m    - Limpia la pantalla de la terminal");
     println!("    \x1b[1;33m:exit\x1b[0m     - Finaliza la sesión interactiva");
+    println!("  Opciones de inicio:");
+    println!("    \x1b[1;32m--gateway\x1b[0m - Conecta los agentes al LLM Gateway real (Proyecto 02 en :8081)");
     println!("  O simplemente escribe cualquier meta/requerimiento de ingeniería.");
     println!("\x1b[1;36m--------------------------------------------------------------------------------\x1b[0m\n");
 
-    let (orchestrator, event_bus) = create_default_system();
+    let use_gateway = std::env::args().any(|arg| arg == "--gateway")
+        || std::env::var("USE_GATEWAY").is_ok();
+
+    let (orchestrator, event_bus) = if use_gateway {
+        let gateway_url = std::env::var("GATEWAY_URL")
+            .unwrap_or_else(|_| "http://localhost:8081/v1/chat/completions".into());
+        println!("\x1b[1;32m🚀 [MODO IA REAL ACTIVADO]\x1b[0m Conectando a LLM Gateway en: \x1b[33m{}\x1b[0m\n", gateway_url);
+        let backend = Arc::new(GatewayLlmBackend::new(gateway_url, "smollm2-135m"));
+        create_system_with_backend(backend)
+    } else {
+        println!("\x1b[1;33m⚡ [MODO DETERMINISTA LOCAL ACTIVADO]\x1b[0m (Para activar inferencia con Proyecto 02, usa '--gateway')\n");
+        create_default_system()
+    };
 
     // Suscriptor para streaming de eventos en vivo
     let mut receiver = event_bus.subscribe();
