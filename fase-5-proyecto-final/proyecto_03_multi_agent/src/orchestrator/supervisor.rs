@@ -3,20 +3,12 @@
 
 use super::actor::AgentActorHandle;
 use super::dag::{TaskGraph, TaskNode};
+pub use super::semantic_router::{RouteMatch, SemanticRouter, UserIntent};
 use crate::agent::{AgentContext, AgentMessage, AgentRole, LlmBackend, LlmDecision};
 use crate::events::{AgentEvent, EventBus};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Instant;
-
-/// Tipo de intención clasificada por el Supervisor al recibir la entrada del usuario.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum UserIntent {
-    /// Diálogo general, saludos, preguntas de cortesía o consultas directas sin generación de código.
-    Conversational,
-    /// Tarea técnica de ingeniería que requiere investigación, diseño de código y auditoría con consenso.
-    TechnicalTask,
-}
 
 /// Reporte final estructurado generado por la orquestación multi-agente.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -38,6 +30,7 @@ pub struct SupervisorOrchestrator {
     reviewer: AgentActorHandle,
     event_bus: EventBus,
     llm: Option<Arc<dyn LlmBackend>>,
+    semantic_router: SemanticRouter,
 }
 
 impl SupervisorOrchestrator {
@@ -54,6 +47,7 @@ impl SupervisorOrchestrator {
             reviewer,
             event_bus,
             llm: None,
+            semantic_router: SemanticRouter::new(),
         }
     }
 
@@ -63,63 +57,15 @@ impl SupervisorOrchestrator {
         self
     }
 
-    /// Clasifica si la solicitud del usuario es una conversación general o una tarea técnica de ingeniería.
+    /// Clasifica semánticamente si la solicitud del usuario es conversación o tarea de ingeniería.
     pub fn classify_intent(goal: &str) -> UserIntent {
-        let cleaned = goal.trim().to_lowercase();
+        let router = SemanticRouter::new();
+        router.classify_intent(goal)
+    }
 
-        // 1. Frases y saludos conversacionales explícitos
-        let conversational_prefixes = [
-            "hola", "hi", "hello", "hey", "buenos dias", "buenas tardes", "buenas noches",
-            "saludos", "como estas", "how are you", "que tal", "whats up", "what's up",
-            "quien eres", "who are you", "que eres", "que haces", "what can you do",
-            "gracias", "thanks", "thank you", "chao", "bye", "adios", "ayuda", "help",
-            "buen dia", "good morning", "good evening",
-        ];
-
-        for prefix in &conversational_prefixes {
-            if cleaned == *prefix
-                || cleaned.starts_with(&format!("{prefix} "))
-                || cleaned.starts_with(&format!("{prefix},"))
-                || cleaned.starts_with(&format!("{prefix}!"))
-                || cleaned.starts_with(&format!("{prefix}?"))
-            {
-                // Si la frase además contiene palabras de acción técnica fuerte ("crear", "diseñar", "implementar", "code")
-                // por ejemplo "Hola, crea un buffer", se prioriza la tarea técnica.
-                let has_code_action = [
-                    "crea ", "crear ", "diseña ", "diseñar ", "implementa ", "implementar ",
-                    "escribe ", "escribir ", "make ", "build ", "code ", "implement ",
-                ]
-                .iter()
-                .any(|&act| cleaned.contains(act));
-
-                if !has_code_action {
-                    return UserIntent::Conversational;
-                }
-            }
-        }
-
-        // 2. Palabras clave técnicas de Rust e IA
-        let technical_keywords = [
-            "rust", "code", "codigo", "código", "struct", "impl", "trait", "buffer", "cache",
-            "caché", "simd", "avx", "ring", "ringbuffer", "mutex", "canal", "channel",
-            "thread", "concurren", "lru", "algoritmo", "crear", "diseñar", "implementar",
-            "escribir", "make", "build", "create", "design", "write", "programar", "desarrollar",
-            "modulo", "módulo", "libreria", "librería", "funcion", "función", "calcula",
-            "calcular", "+", "*", "/", "%", "hello world",
-        ];
-
-        let has_technical = technical_keywords.iter().any(|&kw| cleaned.contains(kw));
-        if has_technical {
-            return UserIntent::TechnicalTask;
-        }
-
-        // 3. Frases cortas sin contexto técnico (< 4 palabras) se tratan como conversación
-        let word_count = cleaned.split_whitespace().count();
-        if word_count <= 4 {
-            return UserIntent::Conversational;
-        }
-
-        UserIntent::TechnicalTask
+    /// Retorna los detalles vectoriales del emparejamiento semántico (confianza y similitudes)
+    pub fn classify_route(&self, goal: &str) -> RouteMatch {
+        self.semantic_router.classify(goal)
     }
 
     /// Maneja interacciones conversacionales de forma directa.
@@ -142,7 +88,19 @@ impl SupervisorOrchestrator {
 
         // Respuesta conversacional contextual por defecto (Modo Offline)
         let cleaned = goal.trim().to_lowercase();
-        if cleaned.contains("quien eres") || cleaned.contains("who are you") || cleaned.contains("que eres") {
+        if cleaned.contains("opinas de rust")
+            || cleaned.contains("piensas de rust")
+            || cleaned.contains("opinion de rust")
+            || cleaned.contains("opinión sobre rust")
+            || cleaned.contains("about rust")
+        {
+            "Como supervisor de sistemas de IA en Rust, considero que **Rust representa el estándar moderno de ingeniería de software para sistemas críticos y de alto rendimiento**.\n\n\
+            Sus tres pilares fundamentales transforman el desarrollo:\n\
+            1. **Seguridad de Memoria en Compilación (Borrow Checker):** Elimina punteros nulos, *data races* y *use-after-free* sin necesidad de recolector de basura (GC), garantizando latencias predecibles en microsegundos.\n\
+            2. **Abstracciones de Costo Cero (*Zero-Cost Abstractions*):** Los traits, iteradores y la concurrencia asíncrona de Tokio compilan a instrucciones máquina nativas con rendimiento comparable o superior a C++.\n\
+            3. **Ecosistema Industrial de IA:** Herramientas como ONNX Runtime (`ort`), Hugging Face `Candle`, `Polars` y `Axum` permiten construir motores de inferencia y agentes ultraligeros (< 30 MB RAM) con tipado estricto.\n\n\
+            ¿Deseas que diseñemos o analicemos algún patrón arquitectónico específico en Rust?".to_string()
+        } else if cleaned.contains("quien eres") || cleaned.contains("who are you") || cleaned.contains("que eres") {
             "¡Hola! Soy el Supervisor del Sistema Autónomo Multi-Agente en Rust puro.\n\n\
             Coordino un equipo de agentes concurrentes basados en el Modelo de Actores de Tokio:\n\
             - 🔬 **Investigador (Researcher):** Explora especificaciones y bases documentales RAG.\n\
@@ -154,7 +112,7 @@ impl SupervisorOrchestrator {
         } else {
             format!(
                 "¡Hola! Recibí tu mensaje: \"{}\".\n\n\
-                Soy el Supervisor del framework multi-agente. Estoy listo para ayudarte tanto con consultas conversacionales como con la coordinación de tareas complejas de ingeniería en Rust.\n\
+                Soy el Supervisor del framework multi-agente. Mi enrutador semántico ha clasificado tu consulta como conversacional. Estoy listo para ayudarte tanto con consultas conceptuales como con la coordinación de tareas complejas de ingeniería en Rust.\n\
                 ¿En qué puedo ayudarte hoy?",
                 goal.trim()
             )
@@ -199,13 +157,16 @@ impl SupervisorOrchestrator {
             timestamp_ms: start_time.elapsed().as_millis() as u64,
         });
 
-        // 1. CLASIFICACIÓN DE INTENCIÓN (Intent Routing)
-        let intent = Self::classify_intent(goal);
+        // 1. CLASIFICACIÓN SEMÁNTICA VECTORIAL DE INTENCIÓN (Semantic Router)
+        let route_match = self.classify_route(goal);
 
-        if intent == UserIntent::Conversational {
+        if route_match.intent == UserIntent::Conversational {
             self.event_bus.publish(AgentEvent::AgentThinking {
                 agent_role: "Supervisor".to_string(),
-                thought: "Intención detectada: Diálogo conversacional. Respondiendo de forma conversacional sin requerir el ciclo de auditoría de código.".to_string(),
+                thought: format!(
+                    "Enrutador Semántico: Intención 'Conversational' detectada (Confianza: {:.2}, Sim Conv: {:.2}, Sim Tech: {:.2}, Ancla: '{}'). Respondiendo de forma conversacional sin requerir ciclo de auditoría de código.",
+                    route_match.confidence, route_match.conv_similarity, route_match.tech_similarity, route_match.top_anchor
+                ),
             });
 
             let conversational_response = self.handle_conversational(goal).await;
@@ -230,6 +191,14 @@ impl SupervisorOrchestrator {
         }
 
         // 2. TAREA TÉCNICA: EJECUTAR GRAFO ACÍCLICO DIRIGIDO (DAG)
+        self.event_bus.publish(AgentEvent::AgentThinking {
+            agent_role: "Supervisor".to_string(),
+            thought: format!(
+                "Enrutador Semántico: Intención 'TechnicalTask' detectada (Confianza: {:.2}, Sim Tech: {:.2}, Sim Conv: {:.2}, Ancla: '{}'). Activando equipo multi-agente con DAG de ejecución.",
+                route_match.confidence, route_match.tech_similarity, route_match.conv_similarity, route_match.top_anchor
+            ),
+        });
+
         let mut graph = self.build_standard_dag(goal);
 
         if graph.has_cycle() {

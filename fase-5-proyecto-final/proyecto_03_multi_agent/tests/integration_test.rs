@@ -236,20 +236,28 @@ async fn test_axum_api_and_sse_streaming() {
 }
 
 // ---------------------------------------------------------------------------
-// TEST 6: Enrutador de Intenciones (Intent Routing) Conversacional vs Técnico
+// TEST 6: Enrutador Semántico Vectorial (Semantic Router) Conversacional vs Técnico
 // ---------------------------------------------------------------------------
 #[tokio::test]
 async fn test_intent_routing_conversational_vs_technical() {
-    use proyecto_03_multi_agent::orchestrator::supervisor::UserIntent;
+    use proyecto_03_multi_agent::orchestrator::semantic_router::{SemanticRouter, UserIntent};
     use proyecto_03_multi_agent::orchestrator::SupervisorOrchestrator;
 
-    // 1. Pruebas de clasificación conversacional
+    // 1. Pruebas de clasificación conversacional y opiniones
     assert_eq!(SupervisorOrchestrator::classify_intent("hola"), UserIntent::Conversational);
     assert_eq!(SupervisorOrchestrator::classify_intent("hi"), UserIntent::Conversational);
     assert_eq!(SupervisorOrchestrator::classify_intent("¿Quién eres?"), UserIntent::Conversational);
     assert_eq!(SupervisorOrchestrator::classify_intent("how are you?"), UserIntent::Conversational);
+    
+    // CASO CLAVE: "¿Qué opinas de Rust?" (Contiene "rust", pero es una pregunta de opinión)
+    assert_eq!(SupervisorOrchestrator::classify_intent("que opinas de rust"), UserIntent::Conversational);
+    assert_eq!(SupervisorOrchestrator::classify_intent("qué opinas de rust"), UserIntent::Conversational);
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("no me des codigo solo dime que opinas de rust"),
+        UserIntent::Conversational
+    );
 
-    // 2. Pruebas de clasificación de tarea técnica
+    // 2. Pruebas de clasificación de tarea técnica de ingeniería
     assert_eq!(
         SupervisorOrchestrator::classify_intent("Crear un RingBuffer en Rust"),
         UserIntent::TechnicalTask
@@ -263,14 +271,24 @@ async fn test_intent_routing_conversational_vs_technical() {
         UserIntent::TechnicalTask
     );
 
-    // 3. Ejecución de flujo conversacional de punta a punta
+    // 3. Verificación de similitud semántica y confianza del SemanticRouter
+    let router = SemanticRouter::new();
+    let res_opinion = router.classify("que opinas de rust");
+    assert_eq!(res_opinion.intent, UserIntent::Conversational);
+    assert!(res_opinion.conv_similarity > res_opinion.tech_similarity);
+
+    let res_buffer = router.classify("diseñar un RingBuffer continuo en Rust");
+    assert_eq!(res_buffer.intent, UserIntent::TechnicalTask);
+    assert!(res_buffer.tech_similarity > res_buffer.conv_similarity);
+
+    // 4. Ejecución de flujo conversacional de punta a punta para "¿qué opinas de rust?"
     let (orchestrator, _) = create_default_system();
     let report = orchestrator
-        .run_workflow("wf-chat-01", "Hola, ¿quién eres?")
+        .run_workflow("wf-chat-opinion", "que opinas de rust")
         .await
         .unwrap();
 
     assert!(report.success);
     assert!(report.generated_code.is_none()); // No se forzó generación de código
-    assert!(report.final_synthesis.contains("Supervisor") || report.final_synthesis.contains("Hola"));
+    assert!(report.final_synthesis.contains("Borrow Checker") || report.final_synthesis.contains("Rust"));
 }

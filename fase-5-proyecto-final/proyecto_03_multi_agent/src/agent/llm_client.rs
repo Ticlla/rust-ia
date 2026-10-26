@@ -335,6 +335,18 @@ impl LlmBackend for DeterministicLlmBackend {
                     || msg_lower.contains("que eres")
                 {
                     "Soy el orquestador del framework autónomo multi-agente en Rust puro. Puedo conversar contigo directamente o coordinar a mi equipo de agentes concurrentes en Tokio para diseñar y auditar código de alta velocidad.".to_string()
+                } else if msg_lower.contains("opinas de rust")
+                    || msg_lower.contains("piensas de rust")
+                    || msg_lower.contains("opinion de rust")
+                    || msg_lower.contains("opinión sobre rust")
+                    || msg_lower.contains("about rust")
+                {
+                    "Como supervisor de sistemas de IA en Rust, considero que **Rust representa el estándar moderno de ingeniería de software para sistemas críticos y de alto rendimiento**.\n\n\
+                    Sus tres pilares fundamentales transforman el desarrollo:\n\
+                    1. **Seguridad de Memoria en Compilación (Borrow Checker):** Elimina punteros nulos, data races y use-after-free sin recolector de basura (GC), garantizando latencias predecibles en microsegundos.\n\
+                    2. **Abstracciones de Costo Cero (Zero-Cost Abstractions):** Los traits, iteradores y la concurrencia asíncrona de Tokio compilan a instrucciones máquina nativas con rendimiento comparable o superior a C++.\n\
+                    3. **Ecosistema Industrial de IA:** Herramientas como ONNX Runtime (ort), Hugging Face Candle, Polars y Axum permiten construir motores de inferencia y agentes ultraligeros (< 30 MB RAM) con tipado estricto.\n\n\
+                    ¿Deseas que diseñemos o analicemos algún patrón arquitectónico específico en Rust?".to_string()
                 } else if msg_lower.contains("gracias") || msg_lower.contains("thanks") {
                     "¡Con mucho gusto! Estoy a tu disposición siempre que necesites investigar o implementar soluciones en Rust.".to_string()
                 } else {
