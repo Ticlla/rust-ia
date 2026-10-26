@@ -1,0 +1,24 @@
+rust-ia-vision:è
+"
+inputpooled"GlobalAveragePool
+)
+pooled	flattened"Flatten*
+axis 
+.
+	flattened
+W
+Blogits"Gemm*
+transB 
+&
+logitsoutput"Softmax*
+axis VisionClassifier*G"<QQ~>(•½ëÎ¥>¤òB?çÅï½™Áï½¥#J?švÄ>ò^p¾7åŠ>Em¾!tn¾õÄ÷=^æt¿Ê\¿BW*"ÍÌÌ=ÍÌL>ÍÌÌ½ÍÌL=š™™>BBZ&
+input
+
+batch
+
+à
+àb
+output
+
+batch
+B

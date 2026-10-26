@@ -4,4 +4,5 @@ members = [
     "proyecto_01_rag_engine",
     "proyecto_02_llm_gateway",
     "proyecto_03_multi_agent",
+    "proyecto_04_edge_inference",
 ]

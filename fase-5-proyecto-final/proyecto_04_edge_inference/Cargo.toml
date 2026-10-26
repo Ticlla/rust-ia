@@ -1,0 +1,25 @@
+[package]
+name = "proyecto_04_edge_inference"
+version = "0.1.0"
+edition = "2024"
+default-run = "proyecto_04_edge_inference"
+
+[dependencies]
+axum = { version = "0.8.1", features = ["tokio", "multipart"] }
+base64 = "0.22.1"
+hound = "3.5.1"
+image = { version = "0.25.5", default-features = false, features = ["png", "jpeg"] }
+ndarray = "0.16.1"
+ort = { version = "2.0.0-rc.15", default-features = false, features = ["download-binaries", "copy-dylibs", "ndarray", "std", "tls-rustls"] }
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.139"
+tokio = { version = "1.43.0", features = ["full"] }
+tower = { version = "0.5.2", features = ["util"] }
+tower-http = { version = "0.6.2", features = ["cors", "trace"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+uuid = { version = "1.15.1", features = ["v4"] }
+
+[dev-dependencies]
+reqwest = { version = "0.13.5", default-features = false, features = ["json"] }
+tower = { version = "0.5.2", features = ["util"] }
