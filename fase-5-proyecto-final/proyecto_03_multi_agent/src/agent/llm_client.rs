@@ -327,3 +327,148 @@ impl LlmBackend for DeterministicLlmBackend {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// 5. GATEWAY LLM BACKEND (Conexión al Proyecto 02 / vLLM / OpenAI)
+// ---------------------------------------------------------------------------
+
+/// Backend de lenguaje que se comunica vía HTTP con nuestro LLM Serving Gateway (Proyecto 02)
+/// o cualquier servidor compatible con la API OpenAI (Ollama, vLLM, DeepSeek, Localhost).
+#[derive(Clone)]
+pub struct GatewayLlmBackend {
+    client: reqwest::Client,
+    pub endpoint: String,
+    pub model: String,
+}
+
+impl GatewayLlmBackend {
+    /// Inicializa el cliente HTTP apuntando al endpoint de inferencia.
+    pub fn new(endpoint: impl Into<String>, model: impl Into<String>) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            endpoint: endpoint.into(),
+            model: model.into(),
+        }
+    }
+
+    /// Inicializa apuntando al Proyecto 02 en `http://localhost:8081/v1/chat/completions` con `smollm2-135m`.
+    pub fn default_local() -> Self {
+        Self::new("http://localhost:8081/v1/chat/completions", "smollm2-135m")
+    }
+}
+
+#[async_trait]
+impl LlmBackend for GatewayLlmBackend {
+    async fn decide(
+        &self,
+        context: &AgentContext,
+        tools: &ToolRegistry,
+    ) -> Result<LlmDecision, String> {
+        let tools_schema = tools.to_openai_tools_schema();
+
+        let mut messages = Vec::new();
+        let system_instructions = format!(
+            "{}\n\n\
+            Tienes disponibles las siguientes herramientas en formato JSON Schema:\n{}\n\n\
+            REGLAS DE RESPUESTA:\n\
+            Si decides invocar una herramienta, responde EXACTAMENTE en este formato:\n\
+            Thought: <tu razonamiento de que hacer>\n\
+            Action: <nombre_de_herramienta>\n\
+            Arguments: <argumentos en JSON valido>\n\n\
+            Si tienes la respuesta final para el usuario o tarea, responde:\n\
+            Thought: <tu razonamiento final>\n\
+            Final Answer: <tu entrega o respuesta completa>",
+            context.system_prompt,
+            serde_json::to_string_pretty(&tools_schema).unwrap_or_default()
+        );
+
+        messages.push(serde_json::json!({
+            "role": "system",
+            "content": system_instructions
+        }));
+
+        for msg in &context.messages {
+            messages.push(serde_json::json!({
+                "role": msg.role,
+                "content": msg.content
+            }));
+        }
+
+        let payload = serde_json::json!({
+            "model": self.model,
+            "messages": messages,
+            "temperature": 0.2,
+            "max_tokens": 512,
+            "stream": false
+        });
+
+        let response = self
+            .client
+            .post(&self.endpoint)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| format!("Fallo al conectar con LLM Gateway en '{}': {e}", self.endpoint))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let err_text = response.text().await.unwrap_or_default();
+            return Err(format!("LLM Gateway devolvió código {status}: {err_text}"));
+        }
+
+        let body: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("Error al deserializar respuesta JSON del Gateway: {e}"))?;
+
+        let raw_text = body["choices"][0]["message"]["content"]
+            .as_str()
+            .ok_or_else(|| "El payload de respuesta del Gateway no contiene 'choices[0].message.content'".to_string())?;
+
+        // Parsear formato ReAct
+        if raw_text.contains("Action:") && raw_text.contains("Arguments:") {
+            let mut thought = String::new();
+            let mut tool_name = String::new();
+            let mut arguments_str = String::new();
+
+            for line in raw_text.lines() {
+                let trimmed = line.trim();
+                if let Some(t) = trimmed.strip_prefix("Thought:") {
+                    thought = t.trim().to_string();
+                } else if let Some(a) = trimmed.strip_prefix("Action:") {
+                    tool_name = a.trim().to_string();
+                } else if let Some(args) = trimmed.strip_prefix("Arguments:") {
+                    arguments_str = args.trim().to_string();
+                }
+            }
+
+            let arguments = serde_json::from_str(&arguments_str)
+                .unwrap_or_else(|_| serde_json::json!({ "raw": arguments_str }));
+
+            Ok(LlmDecision::ToolCall {
+                thought: if thought.is_empty() { "Invocando herramienta requerida.".into() } else { thought },
+                tool_name,
+                arguments,
+            })
+        } else if let Some(idx) = raw_text.find("Final Answer:") {
+            let thought_part = &raw_text[..idx];
+            let thought = thought_part
+                .strip_prefix("Thought:")
+                .unwrap_or(thought_part)
+                .trim()
+                .to_string();
+
+            let answer = raw_text[idx + "Final Answer:".len()..].trim().to_string();
+
+            Ok(LlmDecision::FinalAnswer {
+                thought: if thought.is_empty() { "Razonamiento completado.".into() } else { thought },
+                answer,
+            })
+        } else {
+            Ok(LlmDecision::FinalAnswer {
+                thought: "Respuesta directa emitida por el LLM.".into(),
+                answer: raw_text.to_string(),
+            })
+        }
+    }
+}
