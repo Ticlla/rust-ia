@@ -1,0 +1,21 @@
+[package]
+name = "proyecto_03_multi_agent"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-stream = "0.3.6"
+async-trait = "0.1.86"
+axum = { version = "0.8.1", features = ["tokio"] }
+futures-util = "0.3.31"
+schemars = { version = "0.8.21", features = ["derive"] }
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.139"
+tokio = { version = "1.43.0", features = ["full"] }
+tower = { version = "0.5.2", features = ["util"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+uuid = { version = "1.13.1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+tower = { version = "0.5.2", features = ["util"] }

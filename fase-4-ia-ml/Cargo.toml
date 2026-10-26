@@ -1,0 +1,92 @@
+[package]
+name = "fase_4_ia_ml"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+candle-core = "0.11.0"
+candle-nn = "0.11.0"
+linfa = "0.8.1"
+linfa-clustering = "0.8.1"
+linfa-linear = "0.8.1"
+ndarray = "0.16"
+ort = { version = "2.0.0-rc.15", default-features = false, features = ["download-binaries", "copy-dylibs", "ndarray", "std", "tls-rustls"] }
+tokenizers = "0.23.2"
+
+# CLASE 01: Machine Learning Clásico con linfa
+[[bin]]
+name = "c01_teoria"
+path = "clases/clase_01_linfa/01_teoria.rs"
+
+[[bin]]
+name = "c01_errores"
+path = "clases/clase_01_linfa/02_errores_comunes.rs"
+
+[[bin]]
+name = "c01_ejercicios"
+path = "clases/clase_01_linfa/03_ejercicios.rs"
+
+# CLASE 02: Inferencia de Modelos Exportados con ONNX Runtime (ort)
+[[bin]]
+name = "c02_teoria"
+path = "clases/clase_02_onnx/01_teoria.rs"
+
+[[bin]]
+name = "c02_errores"
+path = "clases/clase_02_onnx/02_errores_comunes.rs"
+
+[[bin]]
+name = "c02_ejercicios"
+path = "clases/clase_02_onnx/03_ejercicios.rs"
+
+# CLASE 03: Tokenización de Alto Rendimiento con tokenizers de Hugging Face
+[[bin]]
+name = "c03_teoria"
+path = "clases/clase_03_tokenizers/01_teoria.rs"
+
+[[bin]]
+name = "c03_errores"
+path = "clases/clase_03_tokenizers/02_errores_comunes.rs"
+
+[[bin]]
+name = "c03_ejercicios"
+path = "clases/clase_03_tokenizers/03_ejercicios.rs"
+
+# CLASE 04: Framework de Deep Learning Candle (Hugging Face)
+[[bin]]
+name = "c04_teoria"
+path = "clases/clase_04_candle/01_teoria.rs"
+
+[[bin]]
+name = "c04_errores"
+path = "clases/clase_04_candle/02_errores_comunes.rs"
+
+[[bin]]
+name = "c04_ejercicios"
+path = "clases/clase_04_candle/03_ejercicios.rs"
+
+# CLASE 05: Arquitectura Transformer y Memoria KV-Cache
+[[bin]]
+name = "c05_teoria"
+path = "clases/clase_05_transformer/01_teoria.rs"
+
+[[bin]]
+name = "c05_errores"
+path = "clases/clase_05_transformer/02_errores_comunes.rs"
+
+[[bin]]
+name = "c05_ejercicios"
+path = "clases/clase_05_transformer/03_ejercicios.rs"
+
+# CLASE 06: Checkpoint Final Fase 4 — Servidor de Inferencia LLM con Token Streaming en Vivo
+[[bin]]
+name = "c06_teoria"
+path = "clases/clase_06_checkpoint/01_teoria.rs"
+
+[[bin]]
+name = "c06_errores"
+path = "clases/clase_06_checkpoint/02_errores_comunes.rs"
+
+[[bin]]
+name = "c06_ejercicios"
+path = "clases/clase_06_checkpoint/03_ejercicios.rs"

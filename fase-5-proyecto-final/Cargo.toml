@@ -1,0 +1,7 @@
+[workspace]
+resolver = "3"
+members = [
+    "proyecto_01_rag_engine",
+    "proyecto_02_llm_gateway",
+    "proyecto_03_multi_agent",
+]

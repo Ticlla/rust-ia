@@ -1,0 +1,22 @@
+[package]
+name = "proyecto_02_llm_gateway"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-stream = "0.3.6"
+axum = { version = "0.8.1", features = ["tokio"] }
+candle-core = "0.11.0"
+candle-nn = "0.11.0"
+candle-transformers = "0.11.0"
+futures-util = "0.3.31"
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.139"
+tokenizers = "0.22.2"
+tokio = { version = "1.43.0", features = ["full"] }
+tokio-stream = { version = "0.1.17", features = ["sync"] }
+tower = { version = "0.5.2", features = ["util"] }
+tower-http = { version = "0.6.2", features = ["cors", "trace"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+uuid = { version = "1.15.1", features = ["v4"] }

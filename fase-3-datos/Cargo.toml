@@ -1,0 +1,97 @@
+[package]
+name = "fase_3_datos"
+version = "0.1.0"
+edition = "2024"
+default-run = "c01_teoria"
+
+[dependencies]
+bincode = "1.3.3"
+memmap2 = "0.9.12"
+ndarray = "0.17.2"
+polars = { version = "0.55.2", features = ["lazy", "csv"] }
+rayon = "1.12.0"
+safetensors = "0.8.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+
+# CLASE 01: Álgebra Lineal y Tensores con ndarray
+[[bin]]
+name = "c01_teoria"
+path = "clases/clase_01_ndarray/01_teoria.rs"
+
+[[bin]]
+name = "c01_errores"
+path = "clases/clase_01_ndarray/02_errores_comunes.rs"
+
+[[bin]]
+name = "c01_ejercicios"
+path = "clases/clase_01_ndarray/03_ejercicios.rs"
+
+# CLASE 02: Procesamiento Masivo con Polars
+[[bin]]
+name = "c02_teoria"
+path = "clases/clase_02_polars/01_teoria.rs"
+
+[[bin]]
+name = "c02_errores"
+path = "clases/clase_02_polars/02_errores_comunes.rs"
+
+[[bin]]
+name = "c02_ejercicios"
+path = "clases/clase_02_polars/03_ejercicios.rs"
+
+# CLASE 03: Serialización Binaria y Formatos de Modelos
+[[bin]]
+name = "c03_teoria"
+path = "clases/clase_03_serializacion/01_teoria.rs"
+
+[[bin]]
+name = "c03_errores"
+path = "clases/clase_03_serializacion/02_errores_comunes.rs"
+
+[[bin]]
+name = "c03_ejercicios"
+path = "clases/clase_03_serializacion/03_ejercicios.rs"
+
+# CLASE 04: Memoria Mapeada (mmap) para Modelos Gigantes
+[[bin]]
+name = "c04_teoria"
+path = "clases/clase_04_mmap/01_teoria.rs"
+
+[[bin]]
+name = "c04_errores"
+path = "clases/clase_04_mmap/02_errores_comunes.rs"
+
+[[bin]]
+name = "c04_ejercicios"
+path = "clases/clase_04_mmap/03_ejercicios.rs"
+
+# CLASE 05: Vectorización y SIMD Explícito (AVX2 / AVX-512)
+[[bin]]
+name = "c05_teoria"
+path = "clases/clase_05_simd/01_teoria.rs"
+
+[[bin]]
+name = "c05_errores"
+path = "clases/clase_05_simd/02_errores_comunes.rs"
+
+[[bin]]
+name = "c05_ejercicios"
+path = "clases/clase_05_simd/03_ejercicios.rs"
+
+# CLASE 06: Checkpoint Final Fase 3 - Motor de Búsqueda Vectorial (RAG Index)
+[[bin]]
+name = "c06_teoria"
+path = "clases/clase_06_motor_vectorial/01_teoria.rs"
+
+[[bin]]
+name = "c06_errores"
+path = "clases/clase_06_motor_vectorial/02_errores_comunes.rs"
+
+[[bin]]
+name = "c06_ejercicios"
+path = "clases/clase_06_motor_vectorial/03_ejercicios.rs"
+
+[[bin]]
+name = "c06_interactivo"
+path = "clases/clase_06_motor_vectorial/04_interactivo.rs"

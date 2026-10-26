@@ -1,0 +1,180 @@
+[package]
+name = "fase_1_fundamentos"
+version = "0.1.0"
+edition = "2024"
+default-run = "fase_1_fundamentos"
+autobins = true
+
+[dependencies]
+
+[[bin]]
+name = "c01_teoria"
+path = "clases/clase_01_variables/01_teoria.rs"
+
+[[bin]]
+name = "c01_errores"
+path = "clases/clase_01_variables/02_errores_comunes.rs"
+
+[[bin]]
+name = "c01_ejercicios"
+path = "clases/clase_01_variables/03_ejercicios.rs"
+
+[[bin]]
+name = "c02_teoria"
+path = "clases/clase_02_tipos_de_datos/01_teoria.rs"
+
+[[bin]]
+name = "c02_errores"
+path = "clases/clase_02_tipos_de_datos/02_errores_comunes.rs"
+
+[[bin]]
+name = "c02_ejercicios"
+path = "clases/clase_02_tipos_de_datos/03_ejercicios.rs"
+
+[[bin]]
+name = "c03_teoria"
+path = "clases/clase_03_funciones/01_teoria.rs"
+
+[[bin]]
+name = "c03_errores"
+path = "clases/clase_03_funciones/02_errores_comunes.rs"
+
+[[bin]]
+name = "c03_ejercicios"
+path = "clases/clase_03_funciones/03_ejercicios.rs"
+
+[[bin]]
+name = "c04_teoria"
+path = "clases/clase_04_control_de_flujo/01_teoria.rs"
+
+[[bin]]
+name = "c04_errores"
+path = "clases/clase_04_control_de_flujo/02_errores_comunes.rs"
+
+[[bin]]
+name = "c04_ejercicios"
+path = "clases/clase_04_control_de_flujo/03_ejercicios.rs"
+
+[[bin]]
+name = "c05_teoria"
+path = "clases/clase_05_ownership/01_teoria.rs"
+
+[[bin]]
+name = "c05_errores"
+path = "clases/clase_05_ownership/02_errores_comunes.rs"
+
+[[bin]]
+name = "c05_ejercicios"
+path = "clases/clase_05_ownership/03_ejercicios.rs"
+
+[[bin]]
+name = "c06_teoria"
+path = "clases/clase_06_borrowing/01_teoria.rs"
+
+[[bin]]
+name = "c06_errores"
+path = "clases/clase_06_borrowing/02_errores_comunes.rs"
+
+[[bin]]
+name = "c06_ejercicios"
+path = "clases/clase_06_borrowing/03_ejercicios.rs"
+
+[[bin]]
+name = "c07_teoria"
+path = "clases/clase_07_slices/01_teoria.rs"
+
+[[bin]]
+name = "c07_errores"
+path = "clases/clase_07_slices/02_errores_comunes.rs"
+
+[[bin]]
+name = "c07_ejercicios"
+path = "clases/clase_07_slices/03_ejercicios.rs"
+
+[[bin]]
+name = "c08_teoria"
+path = "clases/clase_08_structs/01_teoria.rs"
+
+[[bin]]
+name = "c08_errores"
+path = "clases/clase_08_structs/02_errores_comunes.rs"
+
+[[bin]]
+name = "c08_ejercicios"
+path = "clases/clase_08_structs/03_ejercicios.rs"
+
+[[bin]]
+name = "c09_teoria"
+path = "clases/clase_09_enums/01_teoria.rs"
+
+[[bin]]
+name = "c09_errores"
+path = "clases/clase_09_enums/02_errores_comunes.rs"
+
+[[bin]]
+name = "c09_ejercicios"
+path = "clases/clase_09_enums/03_ejercicios.rs"
+
+[[bin]]
+name = "c10_teoria"
+path = "clases/clase_10_errores/01_teoria.rs"
+
+[[bin]]
+name = "c10_errores"
+path = "clases/clase_10_errores/02_errores_comunes.rs"
+
+[[bin]]
+name = "c10_ejercicios"
+path = "clases/clase_10_errores/03_ejercicios.rs"
+
+[[bin]]
+name = "c11_teoria"
+path = "clases/clase_11_iteradores/01_teoria.rs"
+
+[[bin]]
+name = "c11_errores"
+path = "clases/clase_11_iteradores/02_errores_comunes.rs"
+
+[[bin]]
+name = "c11_ejercicios"
+path = "clases/clase_11_iteradores/03_ejercicios.rs"
+
+[[bin]]
+name = "c12_teoria"
+path = "clases/clase_12_traits/01_teoria.rs"
+
+[[bin]]
+name = "c12_errores"
+path = "clases/clase_12_traits/02_errores_comunes.rs"
+
+[[bin]]
+name = "c12_ejercicios"
+path = "clases/clase_12_traits/03_ejercicios.rs"
+
+[[bin]]
+name = "c13_teoria"
+path = "clases/clase_13_lifetimes/01_teoria.rs"
+
+[[bin]]
+name = "c13_errores"
+path = "clases/clase_13_lifetimes/02_errores_comunes.rs"
+
+[[bin]]
+name = "c13_ejercicios"
+path = "clases/clase_13_lifetimes/03_ejercicios.rs"
+
+[[bin]]
+name = "c14_proyecto"
+path = "clases/clase_14_proyecto_regresion/01_teoria.rs"
+
+[[bin]]
+name = "c14_errores"
+path = "clases/clase_14_proyecto_regresion/02_errores_comunes.rs"
+
+[[bin]]
+name = "c14_ejercicios"
+path = "clases/clase_14_proyecto_regresion/03_ejercicios.rs"
+
+[[bin]]
+name = "c14_interactivo"
+path = "clases/clase_14_proyecto_regresion/04_interactivo.rs"

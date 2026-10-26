@@ -1,0 +1,30 @@
+# Rust build artifacts
+target/
+**/target/
+**/*.rs.bk
+
+# Large model weights (Hugging Face / LLMs)
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.gguf
+
+# Media files
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example

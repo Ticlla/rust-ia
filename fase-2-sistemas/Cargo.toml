@@ -1,0 +1,172 @@
+[package]
+name = "fase_2_sistemas"
+version = "0.1.0"
+edition = "2024"
+default-run = "fase_2_sistemas"
+
+[dependencies]
+axum = "0.8.9"
+futures = "0.3.34"
+rayon = "1.12.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tokio = { version = "1.54.1", features = ["full"] }
+
+# CLASE 01: Hilos Nativos
+[[bin]]
+name = "c01_teoria"
+path = "clases/clase_01_hilos/01_teoria.rs"
+
+[[bin]]
+name = "c01_errores"
+path = "clases/clase_01_hilos/02_errores_comunes.rs"
+
+[[bin]]
+name = "c01_ejercicios"
+path = "clases/clase_01_hilos/03_ejercicios.rs"
+
+[[bin]]
+name = "c01_demo"
+path = "clases/clase_01_hilos/04_demo_corte_hilos.rs"
+
+# CLASE 02: Canales mpsc
+[[bin]]
+name = "c02_teoria"
+path = "clases/clase_02_canales/01_teoria.rs"
+
+[[bin]]
+name = "c02_errores"
+path = "clases/clase_02_canales/02_errores_comunes.rs"
+
+[[bin]]
+name = "c02_ejercicios"
+path = "clases/clase_02_canales/03_ejercicios.rs"
+
+# CLASE 03: Memoria Compartida
+[[bin]]
+name = "c03_teoria"
+path = "clases/clase_03_memoria_compartida/01_teoria.rs"
+
+[[bin]]
+name = "c03_errores"
+path = "clases/clase_03_memoria_compartida/02_errores_comunes.rs"
+
+[[bin]]
+name = "c03_ejercicios"
+path = "clases/clase_03_memoria_compartida/03_ejercicios.rs"
+
+[[bin]]
+name = "c03_caso1"
+path = "clases/clase_03_memoria_compartida/04_caso1_mover_vs_arc.rs"
+
+[[bin]]
+name = "c03_caso2"
+path = "clases/clase_03_memoria_compartida/05_caso2_mutacion_vs_mutex.rs"
+
+[[bin]]
+name = "c03_caso3"
+path = "clases/clase_03_memoria_compartida/06_caso3_rc_vs_arc.rs"
+
+# CLASE 04: Lecturas Concurrentes con RwLock
+[[bin]]
+name = "c04_teoria"
+path = "clases/clase_04_rwlock/01_teoria.rs"
+
+[[bin]]
+name = "c04_errores"
+path = "clases/clase_04_rwlock/02_errores_comunes.rs"
+
+[[bin]]
+name = "c04_ejercicios"
+path = "clases/clase_04_rwlock/03_ejercicios.rs"
+
+# CLASE 05: Paralelismo con Rayon
+[[bin]]
+name = "c05_teoria"
+path = "clases/clase_05_rayon/01_teoria.rs"
+
+[[bin]]
+name = "c05_errores"
+path = "clases/clase_05_rayon/02_errores_comunes.rs"
+
+[[bin]]
+name = "c05_ejercicios"
+path = "clases/clase_05_rayon/03_ejercicios.rs"
+
+# CLASE 06: Asincronía Básica
+[[bin]]
+name = "c06_teoria"
+path = "clases/clase_06_asincronia_basica/01_teoria.rs"
+
+[[bin]]
+name = "c06_errores"
+path = "clases/clase_06_asincronia_basica/02_errores_comunes.rs"
+
+[[bin]]
+name = "c06_ejercicios"
+path = "clases/clase_06_asincronia_basica/03_ejercicios.rs"
+
+# CLASE 07: Runtime Tokio
+[[bin]]
+name = "c07_teoria"
+path = "clases/clase_07_tokio/01_teoria.rs"
+
+[[bin]]
+name = "c07_errores"
+path = "clases/clase_07_tokio/02_errores_comunes.rs"
+
+[[bin]]
+name = "c07_ejercicios"
+path = "clases/clase_07_tokio/03_ejercicios.rs"
+
+# CLASE 08: Servidores de Inferencia con Axum
+[[bin]]
+name = "c08_teoria"
+path = "clases/clase_08_axum/01_teoria.rs"
+
+[[bin]]
+name = "c08_errores"
+path = "clases/clase_08_axum/02_errores_comunes.rs"
+
+[[bin]]
+name = "c08_ejercicios"
+path = "clases/clase_08_axum/03_ejercicios.rs"
+
+[[bin]]
+name = "c08_servidor"
+path = "clases/clase_08_axum/04_servidor_en_vivo.rs"
+
+# CLASE 09: Punteros Crudos y unsafe Rust (CUDA)
+[[bin]]
+name = "c09_teoria"
+path = "clases/clase_09_unsafe_cuda/01_teoria.rs"
+
+[[bin]]
+name = "c09_errores"
+path = "clases/clase_09_unsafe_cuda/02_errores_comunes.rs"
+
+[[bin]]
+name = "c09_ejercicios"
+path = "clases/clase_09_unsafe_cuda/03_ejercicios.rs"
+
+# CLASE 10: PROYECTO FINAL INTEGRADOR
+[[bin]]
+name = "c10_proyecto"
+path = "clases/clase_10_proyecto/01_teoria.rs"
+
+[[bin]]
+name = "c10_errores"
+path = "clases/clase_10_proyecto/02_errores_comunes.rs"
+
+[[bin]]
+name = "c10_ejercicios"
+path = "clases/clase_10_proyecto/03_ejercicios.rs"
+
+[[bin]]
+name = "c10_servidor"
+path = "clases/clase_10_proyecto/04_servidor_en_vivo.rs"
+
+
+[[bin]]
+name = "c10_demo_trafico"
+path = "clases/clase_10_proyecto/05_demo_trafico_y_hot_reload.rs"
