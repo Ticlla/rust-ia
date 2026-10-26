@@ -161,10 +161,11 @@ Para evitar bloqueos por dependencias circulares:
 ### 5.2 Propagación de Contexto entre Tareas
 El método `get_dependency_outputs(task_id)` extrae automáticamente las salidas generadas por los nodos padre y las inyecta en el prompt de la tarea dependiente, garantizando que el `Coder` reciba la investigación y el `Reviewer` reciba el código generado.
 
-### 5.3 Enrutador de Intenciones (Intent Routing: Diálogo Conversacional vs. Tarea Técnica)
-Para evitar la sobrecarga innecesaria del grafo multi-agente en interacciones casuales (saludos, preguntas de identidad, agradecimientos), el [`SupervisorOrchestrator`](file:///home/alcidesticlla/Documents/rust-ia/fase-5-proyecto-final/proyecto_03_multi_agent/src/orchestrator/supervisor.rs) implementa clasificación de intención:
-* **`UserIntent::Conversational`**: Atiende la solicitud en **< 1 ms** directamente a través del asistente conversacional, sin invocar el pipeline de codificación ni forzar la generación de sintaxis Rust innecesaria.
-* **`UserIntent::TechnicalTask`**: Activa el DAG completo con orquestación de actores (`Researcher` $\to$ `Coder` $\to$ `Reviewer`), validación de herramientas y ciclo de consenso.
+### 5.3 Enrutador Semántico Vectorial (Semantic Router: FastText Subwords + Max-Cosine Anchor Routing)
+Para evitar la fragilidad de las listas de palabras clave y expresiones regulares (que fallan ante preguntas de opinión como *"¿qué opinas de Rust?"* o negaciones como *"no quiero código, solo tu visión"*), el [`SupervisorOrchestrator`](file:///home/alcidesticlla/Documents/rust-ia/fase-5-proyecto-final/proyecto_03_multi_agent/src/orchestrator/supervisor.rs) incorpora el [`SemanticRouter`](file:///home/alcidesticlla/Documents/rust-ia/fase-5-proyecto-final/proyecto_03_multi_agent/src/orchestrator/semantic_router.rs):
+* **Extractor de Embeddings Densos ([`DenseSubwordEmbedder`](file:///home/alcidesticlla/Documents/rust-ia/fase-5-proyecto-final/proyecto_03_multi_agent/src/orchestrator/semantic_router.rs#L24-L156)):** Proyecta la entrada a $\mathbb{R}^{128}$ L2-normalizado utilizando n-gramas de caracteres (subpalabras de longitud 2 a 4 al estilo FastText) y etiquetado contextual de negaciones (`neg_*`).
+* **Anclajes Vectoriales Bilingües (Anchor Utterances):** Compara la consulta contra cúmulos representativos de diálogo/opinión y de ingeniería técnica.
+* **Algoritmo Max-Cosine:** Calcula la similitud máxima contra los anclajes de cada ruta. Si la similitud de opinión supera a la técnica, se enruta a `Conversational` con **0 ms** de latencia, eliminando falsos positivos. Si domina la intención de construcción o codificación, se activa el DAG (`TechnicalTask`).
 
 ---
 
