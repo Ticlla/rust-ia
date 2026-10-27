@@ -8,6 +8,7 @@ members = [
     "proyecto_04_edge_inference",
     "proyecto_05_agenticidad/nivel_0_zero_shot",
     "proyecto_05_agenticidad/nivel_1_augmented_rag",
+    "proyecto_05_agenticidad/nivel_2_tool_caller",
 ]
 exclude = [
     "proyecto_05_agenticidad/sandbox/broken_service",
