@@ -1,0 +1,16 @@
+[package]
+name = "proyecto_02a_nemotron_client"
+version = "0.1.0"
+edition = "2024"
+default-run = "proyecto_02a_nemotron_client"
+
+[dependencies]
+async-trait = "0.1.86"
+futures-util = "0.3.31"
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "stream", "rustls"] }
+serde = { version = "1.0.218", features = ["derive"] }
+serde_json = "1.0.139"
+tokio = { version = "1.43.0", features = ["full"] }
+tokio-stream = { version = "0.1.17", features = ["sync"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
