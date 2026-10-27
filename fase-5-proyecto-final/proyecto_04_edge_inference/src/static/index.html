@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edge Vision & Audio Microservice — Consola Interactiva</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --cyan: #58a6ff;
+      --green: #3fb950;
+      --amber: #d29922;
+      --red: #f85149;
+      --text: #c9d1d9;
+      --text-bright: #ffffff;
+      --accent: #238636;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .header h1 {
+      font-size: 24px;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge-status {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--green);
+      border: 1px solid var(--green);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .tab-btn {
+      background: var(--card-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #1f6feb;
+      color: white;
+      border-color: #1f6feb;
+    }
+    .tab-btn:hover:not(.active) {
+      border-color: var(--text);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 900px) {
+      .tab-content.active { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card h2 {
+      font-size: 18px;
+      color: var(--text-bright);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: border 0.2s;
+      margin-bottom: 16px;
+    }
+    .dropzone:hover { border-color: var(--cyan); }
+    .preview-box {
+      margin-top: 12px;
+      text-align: center;
+      max-height: 240px;
+      overflow: hidden;
+      border-radius: 6px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview-box img { max-width: 100%; max-height: 240px; object-fit: contain; }
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary {
+      background: #21262d;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #30363d; }
+    .btn-record {
+      background: #da3633;
+    }
+    .btn-record.recording {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    .quick-samples {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .quick-sample-btn {
+      font-size: 12px;
+      background: #21262d;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .quick-sample-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .metric-pill {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .metric-pill .label { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-pill .value { font-size: 20px; font-weight: bold; color: var(--cyan); margin-top: 4px; }
+    .pred-item {
+      margin-bottom: 14px;
+    }
+    .pred-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    .pred-bar-bg {
+      background: #21262d;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .pred-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1f6feb, var(--cyan));
+      border-radius: 5px;
+      transition: width 0.4s ease;
+    }
+    .pred-bar-fill.accent-amber {
+      background: linear-gradient(90deg, #d29922, #f1e05a);
+    }
+    .latency-card {
+      margin-top: 20px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .latency-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .latency-row:last-child {
+      border-bottom: none;
+      font-weight: bold;
+      color: var(--green);
+      margin-top: 4px;
+      padding-top: 8px;
+    }
+    .code-box {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: #79c0ff;
+      overflow-x: auto;
+      max-height: 200px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>⚡ Edge Vision & Audio Microservice</h1>
+      <p style="color: #8b949e; font-size: 14px; margin-top: 4px;">Inferencia Analítica en Tiempo Real con Rust puro + ONNX Runtime SIMD</p>
+    </div>
+    <div class="badge-status" id="service-status">● SERVICIO ACTIVO (8082)</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('vision')">👁️ Inspección Visual</button>
+    <button class="tab-btn" onclick="switchTab('audio')">🎙️ Reconocimiento Acústico</button>
+    <button class="tab-btn" onclick="switchTab('metrics')">📊 Telemetría & Pool ONNX</button>
+  </div>
+
+  <!-- TAB 1: VISIÓN -->
+  <div id="tab-vision" class="tab-content active">
+    <div class="card">
+      <h2>🖼️ Muestra de Imagen para Análisis</h2>
+      <div class="dropzone" id="vision-dropzone" onclick="document.getElementById('vision-file').click()">
+        <p>Arrastra una foto aquí o <strong>haz clic para seleccionar</strong></p>
+        <span style="font-size: 12px; color: #8b949e;">Soporta PNG, JPEG (Cámaras industriales, inspección)</span>
+        <input type="file" id="vision-file" accept="image/*" style="display:none" onchange="handleVisionFile(this.files[0])">
+      </div>
+      <div class="quick-samples">
+        <span style="font-size: 12px; color: #8b949e; align-self: center;">Muestras rápidas:</span>
+        <button class="quick-sample-btn" onclick="loadSampleVision(1)">📷 Defecto en Superficie</button>
+        <button class="quick-sample-btn" onclick="loadSampleVision(2)">📷 Pieza Limpia</button>
+      </div>
+      <div class="preview-box" id="vision-preview" style="display:none;">
+        <img id="vision-img-tag" src="" alt="Vista previa">
+      </div>
+      <div style="margin-top: 16px;">
+        <button class="btn" id="btn-analyze-vision" onclick="analyzeVision()">
+          🔍 Analizar Imagen con ONNX
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🎯 Diagnóstico del Modelo</h2>
+      <div id="vision-results" style="display:none;">
+        <div id="vision-preds-list"></div>
+        <div class="latency-card">
+          <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: var(--cyan);">⏱️ Desglose de Latencia en Hardware</div>
+          <div class="latency-row"><span>Preproceso (Letterbox + HWC→NCHW):</span><span id="vis-t-pre">0.00 ms</span></div>
+          <div class="latency-row"><span>Inferencia ONNX Runtime (CPU SIMD):</span><span id="vis-t-inf">0.00 ms</span></div>
+          <div class="latency-row"><span>Postproceso (Softmax + Top-K):</span><span id="vis-t-post">0.00 ms</span></div>
+          <div class="latency-row"><span>Latencia Total Microservicio:</span><span id="vis-t-tot">0.00 ms</span></div>
+        </div>
+      </div>
+      <div id="vision-placeholder" style="color: #8b949e; text-align: center; padding: 40px 0;">
+        Selecciona o arrastra una imagen para ver el análisis en tiempo real.
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: AUDIO -->
+  <div id="tab-audio" class="tab-content">
+    <div class="card">
+      <h2>🎙️ Señal de Audio para Análisis</h2>
+      <div class="dropzone" id="audio-dropzone" onclick="document.getElementById('audio-file').click()">
+        <p>Arrastra un archivo <strong>WAV</strong> aquí o haz clic para subir</p>
+        <span style="font-size: 12px; color: #8b949e;">PCM 16/24/32 bits mono o estéreo</span>
+        <input type="file" id="audio-file" accept=".wav" style="display:none" onchange="handleAudioFile(this.files[0])">
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 12px;">
+        <button class="btn btn-record" id="btn-record-audio" onclick="toggleMicRecord()">
+          🔴 Grabar Micrófono (1s)
+        </button>
+        <button class="btn btn-secondary" onclick="loadSampleAudio()">
+          🔊 Cargar Tono de Alerta (WAV)
+        </button>
+      </div>
+      <div id="audio-status" style="margin-top: 14px; font-size: 13px; color: var(--amber); display:none;"></div>
+      <div style="margin-top: 16px;">
+        <button class="btn" id="btn-analyze-audio" onclick="analyzeAudio()">
+          ⚡ Analizar Audio con ONNX
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🗣️ Detección de Palabras Clave (KWS)</h2>
+      <div id="audio-results" style="display:none;">
+        <div id="audio-preds-list"></div>
+        <div class="latency-card">
+          <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: var(--amber);">⏱️ Desglose de Latencia en Hardware</div>
+          <div class="latency-row"><span>Decodificación WAV + Resample:</span><span id="aud-t-dec">0.00 ms</span></div>
+          <div class="latency-row"><span>Espectrograma Log-Mel (80 bins):</span><span id="aud-t-spec">0.00 ms</span></div>
+          <div class="latency-row"><span>Inferencia ONNX Runtime (CPU SIMD):</span><span id="aud-t-inf">0.00 ms</span></div>
+          <div class="latency-row"><span>Postproceso (Softmax + Top-K):</span><span id="aud-t-post">0.00 ms</span></div>
+          <div class="latency-row"><span>Latencia Total Microservicio:</span><span id="aud-t-tot">0.00 ms</span></div>
+        </div>
+      </div>
+      <div id="audio-placeholder" style="color: #8b949e; text-align: center; padding: 40px 0;">
+        Graba tu voz o selecciona un archivo WAV para clasificar el comando acústico.
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: MÉTRICAS -->
+  <div id="tab-metrics" class="tab-content">
+    <div class="card">
+      <h2>📊 Estado del Servidor & Pool de Concurrencia</h2>
+      <div class="metrics-grid">
+        <div class="metric-pill">
+          <div class="label">Peticiones Totales</div>
+          <div class="value" id="m-total">0</div>
+        </div>
+        <div class="metric-pill">
+          <div class="label">Peticiones Exitosas</div>
+          <div class="value" style="color: var(--green);" id="m-success">0</div>
+        </div>
+        <div class="metric-pill">
+          <div class="label">Rechazos (HTTP 429)</div>
+          <div class="value" style="color: var(--red);" id="m-rejected">0</div>
+        </div>
+        <div class="metric-pill">
+          <div class="label">Profundidad Cola</div>
+          <div class="value" id="m-queue">0 / 64</div>
+        </div>
+      </div>
+      <h3 style="font-size: 14px; margin-bottom: 8px; color: var(--text-bright);">Pools ONNX Runtime Multi-Sesión</h3>
+      <div class="metrics-grid">
+        <div class="metric-pill">
+          <div class="label">Workers Visión</div>
+          <div class="value" id="m-vis-cap">4</div>
+        </div>
+        <div class="metric-pill">
+          <div class="label">Infs. Visión</div>
+          <div class="value" id="m-vis-inf">0</div>
+        </div>
+        <div class="metric-pill">
+          <div class="label">Workers Audio</div>
+          <div class="value" id="m-aud-cap">4</div>
+        </div>
+        <div class="metric-pill">
+          <div class="label">Infs. Audio</div>
+          <div class="value" id="m-aud-inf">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔌 Telemetría JSON en Vivo (/v1/metrics)</h2>
+      <pre class="code-box" id="metrics-raw">Cargando métricas...</pre>
+      <div style="margin-top: 14px;">
+        <button class="btn btn-secondary" onclick="fetchMetrics()">🔄 Actualizar Ahora</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentVisionB64 = null;
+    let currentAudioB64 = null;
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      if (tab === 'vision') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-vision').classList.add('active');
+      } else if (tab === 'audio') {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-audio').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        document.getElementById('tab-metrics').classList.add('active');
+        fetchMetrics();
+      }
+    }
+
+    // --- VISIÓN ---
+    function handleVisionFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const full = e.target.result;
+        currentVisionB64 = full.split(',')[1];
+        document.getElementById('vision-img-tag').src = full;
+        document.getElementById('vision-preview').style.display = 'flex';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function loadSampleVision(type) {
+      // Generar imagen en canvas según el tipo de muestra
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 240;
+      const ctx = canvas.getContext('2d');
+      if (type === 1) {
+        // Muestra con grieta / defecto
+        ctx.fillStyle = '#b4b4b9';
+        ctx.fillRect(0, 0, 320, 240);
+        ctx.strokeStyle = '#1e1414';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(50, 60); ctx.lineTo(120, 100); ctx.lineTo(160, 180); ctx.lineTo(220, 200);
+        ctx.stroke();
+        ctx.fillStyle = '#642828';
+        ctx.beginPath();
+        ctx.arc(170, 90, 24, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Muestra limpia
+        ctx.fillStyle = '#c8cdd2';
+        ctx.fillRect(0, 0, 320, 240);
+        ctx.strokeStyle = '#78828c';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(40, 40, 240, 160);
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      currentVisionB64 = dataUrl.split(',')[1];
+      document.getElementById('vision-img-tag').src = dataUrl;
+      document.getElementById('vision-preview').style.display = 'flex';
+    }
+
+    async function analyzeVision() {
+      if (!currentVisionB64) {
+        alert("Por favor selecciona o carga una imagen primero.");
+        return;
+      }
+      const btn = document.getElementById('btn-analyze-vision');
+      btn.innerText = "⏳ Analizando en CPU SIMD...";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/v1/vision/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_base64: currentVisionB64, top_k: 5 })
+        });
+        const data = await res.json();
+        renderVisionResults(data);
+      } catch (err) {
+        alert("Error comunicando con el microservicio: " + err);
+      } finally {
+        btn.innerText = "🔍 Analizar Imagen con ONNX";
+        btn.disabled = false;
+      }
+    }
+
+    function renderVisionResults(data) {
+      document.getElementById('vision-placeholder').style.display = 'none';
+      document.getElementById('vision-results').style.display = 'block';
+
+      const list = document.getElementById('vision-preds-list');
+      list.innerHTML = '';
+      data.predictions.forEach(p => {
+        const pct = (p.probability * 100).toFixed(1);
+        list.innerHTML += `
+          <div class="pred-item">
+            <div class="pred-header">
+              <span style="font-weight: 600; color: #fff;">${p.label} (ID: ${p.class_id})</span>
+              <span style="color: var(--cyan); font-weight: bold;">${pct}%</span>
+            </div>
+            <div class="pred-bar-bg">
+              <div class="pred-bar-fill" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      document.getElementById('vis-t-pre').innerText = data.timing.decode_and_preprocess_ms.toFixed(2) + " ms";
+      document.getElementById('vis-t-inf').innerText = data.timing.inference_ms.toFixed(2) + " ms";
+      document.getElementById('vis-t-post').innerText = data.timing.postprocess_ms.toFixed(3) + " ms";
+      document.getElementById('vis-t-tot').innerText = data.timing.total_ms.toFixed(2) + " ms";
+    }
+
+    // --- AUDIO ---
+    function handleAudioFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const full = e.target.result;
+        currentAudioB64 = full.split(',')[1];
+        const status = document.getElementById('audio-status');
+        status.style.display = 'block';
+        status.innerText = `✓ Archivo WAV cargado: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function loadSampleAudio() {
+      // Generar WAV senoidal modulado en JS directamente
+      const sampleRate = 16000;
+      const duration = 1.0;
+      const nSamples = sampleRate * duration;
+      const buffer = new ArrayBuffer(44 + nSamples * 2);
+      const view = new DataView(buffer);
+
+      function writeString(view, offset, string) {
+        for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+      }
+
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + nSamples * 2, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, 1, true); // Mono
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, nSamples * 2, true);
+
+      let offset = 44;
+      for (let i = 0; i < nSamples; i++) {
+        const t = i / sampleRate;
+        const freq = 600.0 + 300.0 * Math.sin(2.0 * Math.PI * 3.0 * t);
+        const sample = Math.sin(2.0 * Math.PI * freq * t) * 0.5;
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+        offset += 2;
+      }
+
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      currentAudioB64 = btoa(binary);
+
+      const status = document.getElementById('audio-status');
+      status.style.display = 'block';
+      status.innerText = "✓ Muestra senoidal generada (1.0s @ 16kHz) lista para análisis.";
+    }
+
+    async function toggleMicRecord() {
+      const btn = document.getElementById('btn-record-audio');
+      const status = document.getElementById('audio-status');
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        const source = audioCtx.createMediaStreamSource(stream);
+        const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+
+        const recordedChunks = [];
+        processor.onaudioprocess = (e) => {
+          const input = e.inputBuffer.getChannelData(0);
+          recordedChunks.push(new Float32Array(input));
+        };
+
+        source.connect(processor);
+        processor.connect(audioCtx.destination);
+
+        btn.classList.add('recording');
+        btn.innerText = "🎙️ Grabando voz (1s)...";
+        status.style.display = 'block';
+        status.innerText = "¡Habla ahora! Grabando señal acústica...";
+
+        setTimeout(() => {
+          source.disconnect();
+          processor.disconnect();
+          stream.getTracks().forEach(t => t.stop());
+          btn.classList.remove('recording');
+          btn.innerText = "🔴 Grabar Micrófono (1s)";
+
+          // Concatenar chunks
+          let totalLen = 0;
+          recordedChunks.forEach(c => totalLen += c.length);
+          const samples = new Float32Array(totalLen);
+          let curr = 0;
+          recordedChunks.forEach(c => { samples.set(c, curr); curr += c.length; });
+
+          // Convertir a WAV 16-bit
+          const wavBuffer = new ArrayBuffer(44 + samples.length * 2);
+          const view = new DataView(wavBuffer);
+          function writeStr(offset, str) { for (let i=0; i<str.length; i++) view.setUint8(offset+i, str.charCodeAt(i)); }
+          writeStr(0, 'RIFF');
+          view.setUint32(4, 36 + samples.length * 2, true);
+          writeStr(8, 'WAVEfmt ');
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true);
+          view.setUint16(22, 1, true);
+          view.setUint32(24, 16000, true);
+          view.setUint32(28, 32000, true);
+          view.setUint16(32, 2, true);
+          view.setUint16(34, 16, true);
+          writeStr(36, 'data');
+          view.setUint32(40, samples.length * 2, true);
+          let off = 44;
+          for (let i = 0; i < samples.length; i++) {
+            const s = Math.max(-1, Math.min(1, samples[i]));
+            view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            off += 2;
+          }
+
+          const bytes = new Uint8Array(wavBuffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+          currentAudioB64 = btoa(binary);
+
+          status.innerText = `✓ Audio capturado (${(samples.length / 16000).toFixed(2)}s). Listo para clasificar.`;
+        }, 1100);
+
+      } catch (e) {
+        alert("No se pudo acceder al micrófono: " + e.message + "\nPuedes usar el botón 'Cargar Tono de Alerta' o subir un archivo WAV.");
+      }
+    }
+
+    async function analyzeAudio() {
+      if (!currentAudioB64) {
+        alert("Por favor graba audio o carga un archivo WAV primero.");
+        return;
+      }
+      const btn = document.getElementById('btn-analyze-audio');
+      btn.innerText = "⏳ Extrayendo Log-Mel & ONNX...";
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/v1/audio/infer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio_base64: currentAudioB64, top_k: 5 })
+        });
+        const data = await res.json();
+        renderAudioResults(data);
+      } catch (err) {
+        alert("Error comunicando con el microservicio: " + err);
+      } finally {
+        btn.innerText = "⚡ Analizar Audio con ONNX";
+        btn.disabled = false;
+      }
+    }
+
+    function renderAudioResults(data) {
+      document.getElementById('audio-placeholder').style.display = 'none';
+      document.getElementById('audio-results').style.display = 'block';
+
+      const list = document.getElementById('audio-preds-list');
+      list.innerHTML = '';
+      data.predictions.forEach(p => {
+        const pct = (p.probability * 100).toFixed(1);
+        list.innerHTML += `
+          <div class="pred-item">
+            <div class="pred-header">
+              <span style="font-weight: 600; color: #fff;">${p.keyword} (ID: ${p.keyword_id})</span>
+              <span style="color: var(--amber); font-weight: bold;">${pct}%</span>
+            </div>
+            <div class="pred-bar-bg">
+              <div class="pred-bar-fill accent-amber" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      document.getElementById('aud-t-dec').innerText = data.timing.decode_and_resample_ms.toFixed(2) + " ms";
+      document.getElementById('aud-t-spec').innerText = data.timing.spectrogram_extraction_ms.toFixed(2) + " ms";
+      document.getElementById('aud-t-inf').innerText = data.timing.inference_ms.toFixed(2) + " ms";
+      document.getElementById('aud-t-post').innerText = data.timing.postprocess_ms.toFixed(3) + " ms";
+      document.getElementById('aud-t-tot').innerText = data.timing.total_ms.toFixed(2) + " ms";
+    }
+
+    // --- MÉTRICAS ---
+    async function fetchMetrics() {
+      try {
+        const res = await fetch('/v1/metrics');
+        const data = await res.json();
+        document.getElementById('m-total').innerText = data.total_requests;
+        document.getElementById('m-success').innerText = data.successful_requests;
+        document.getElementById('m-rejected').innerText = data.rejected_by_backpressure;
+        document.getElementById('m-queue').innerText = `${data.queue.current_depth} / ${data.queue.capacity}`;
+        document.getElementById('m-vis-cap').innerText = data.pool.vision_capacity;
+        document.getElementById('m-vis-inf').innerText = data.pool.vision_total_inferences;
+        document.getElementById('m-aud-cap').innerText = data.pool.audio_capacity;
+        document.getElementById('m-aud-inf').innerText = data.pool.audio_total_inferences;
+        document.getElementById('metrics-raw').innerText = JSON.stringify(data, null, 2);
+      } catch (e) {
+        console.error("Fallo obteniendo métricas:", e);
+      }
+    }
+
+    // Polling ligero de métricas cada 3 segundos
+    setInterval(() => {
+      if (document.getElementById('tab-metrics').classList.contains('active')) {
+        fetchMetrics();
+      }
+    }, 3000);
+  </script>
+</body>
+</html>

@@ -329,3 +329,10 @@ pub async fn metrics_handler(State(state): State<AppState>) -> Json<MetricsRespo
         queue: queue_metrics,
     })
 }
+
+const DASHBOARD_HTML: &str = include_str!("../static/index.html");
+
+/// Consola Web Interactiva para inspección visual y análisis acústico
+pub async fn dashboard_handler() -> axum::response::Html<&'static str> {
+    axum::response::Html(DASHBOARD_HTML)
+}

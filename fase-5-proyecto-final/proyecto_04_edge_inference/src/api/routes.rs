@@ -6,7 +6,8 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 use crate::api::handlers::{
-    classify_vision_handler, health_handler, infer_audio_handler, metrics_handler, AppState,
+    classify_vision_handler, dashboard_handler, health_handler, infer_audio_handler,
+    metrics_handler, AppState,
 };
 
 pub fn create_router(state: AppState) -> Router {
@@ -16,6 +17,7 @@ pub fn create_router(state: AppState) -> Router {
         .allow_headers(Any);
 
     Router::new()
+        .route("/", get(dashboard_handler))
         .route("/v1/vision/classify", post(classify_vision_handler))
         .route("/v1/audio/infer", post(infer_audio_handler))
         .route("/health", get(health_handler))
