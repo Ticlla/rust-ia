@@ -6,4 +6,8 @@ members = [
     "proyecto_02a_nemotron_client",
     "proyecto_03_multi_agent",
     "proyecto_04_edge_inference",
+    "proyecto_05_agenticidad/nivel_0_zero_shot",
+]
+exclude = [
+    "proyecto_05_agenticidad/sandbox/broken_service",
 ]
