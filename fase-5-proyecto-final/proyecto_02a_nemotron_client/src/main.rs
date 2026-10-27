@@ -12,6 +12,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.api_key = Some(key.clone());
         config.backend_mode = proyecto_02a_nemotron_client::BackendMode::NvidiaNim;
     }
+    if args.len() > 2 && !args[2].starts_with('-') {
+        config.model = args[2].clone();
+    }
 
     let client = NemotronClient::new(config)?;
     let mut repl = NemotronRepl::new(client);

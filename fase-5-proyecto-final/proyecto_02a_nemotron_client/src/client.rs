@@ -189,6 +189,11 @@ impl NemotronClient {
                                                     return;
                                                 }
                                             }
+                                            Ok(SseEvent::Reasoning(r)) => {
+                                                if tx.send(Ok(r)).await.is_err() {
+                                                    return;
+                                                }
+                                            }
                                             Ok(SseEvent::Done) => return,
                                             Ok(SseEvent::Comment(_)) | Ok(SseEvent::Empty) => {}
                                             Err(e) => {

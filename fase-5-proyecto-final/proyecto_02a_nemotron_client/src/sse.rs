@@ -5,6 +5,7 @@ use crate::types::ChatCompletionChunk;
 #[derive(Debug, Clone, PartialEq)]
 pub enum SseEvent {
     Token(String),
+    Reasoning(String),
     Done,
     Comment(String),
     Empty,
@@ -35,6 +36,8 @@ impl SseParser {
                     if let Some(choice) = chunk.choices.first() {
                         if let Some(content) = &choice.delta.content {
                             return Ok(SseEvent::Token(content.clone()));
+                        } else if let Some(reasoning) = &choice.delta.reasoning_content {
+                            return Ok(SseEvent::Reasoning(reasoning.clone()));
                         }
                     }
                     Ok(SseEvent::Empty)

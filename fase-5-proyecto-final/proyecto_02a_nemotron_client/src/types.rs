@@ -88,6 +88,8 @@ pub struct ChunkDelta {
     pub role: Option<Role>,
     #[serde(default)]
     pub content: Option<String>,
+    #[serde(default)]
+    pub reasoning_content: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

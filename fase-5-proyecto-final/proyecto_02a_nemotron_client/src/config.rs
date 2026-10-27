@@ -28,6 +28,7 @@ pub struct NemotronConfig {
 impl Default for NemotronConfig {
     fn default() -> Self {
         let env_key = std::env::var("NVIDIA_API_KEY").ok();
+        let env_model = std::env::var("NVIDIA_MODEL").unwrap_or_else(|_| "nvidia/nemotron-3.5-bolt-e4b".to_string());
         let backend_mode = if env_key.is_some() {
             BackendMode::NvidiaNim
         } else {
@@ -38,7 +39,7 @@ impl Default for NemotronConfig {
             backend_mode,
             api_key: env_key,
             base_url: "https://integrate.api.nvidia.com/v1".to_string(),
-            model: "nvidia/llama-3.1-nemotron-70b-instruct".to_string(),
+            model: env_model,
             temperature: 0.6,
             top_p: 0.7,
             max_tokens: Some(2048),
