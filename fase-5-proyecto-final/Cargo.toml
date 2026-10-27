@@ -10,6 +10,7 @@ members = [
     "proyecto_05_agenticidad/nivel_1_augmented_rag",
     "proyecto_05_agenticidad/nivel_2_tool_caller",
     "proyecto_05_agenticidad/nivel_3_react_loop",
+    "proyecto_05_agenticidad/nivel_4_multi_agent",
 ]
 exclude = [
     "proyecto_05_agenticidad/sandbox/broken_service",

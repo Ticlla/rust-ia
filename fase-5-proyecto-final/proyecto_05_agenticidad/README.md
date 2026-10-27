@@ -59,7 +59,7 @@ flowchart LR
 | **1** | [`nivel_1_augmented_rag`](nivel_1_augmented_rag/) | **10%** | Código + Docs `rustc` | Ninguno | Ninguno | **0.0%** (No modifica disco) |
 | **2** | [`nivel_2_tool_caller`](nivel_2_tool_caller/) | **35%** | Esquemas de Tools | `write_file` (1 tiro) | Ninguno | **Frágil / 0%** (Falla de escape fatal) |
 | **3** | [`nivel_3_react_loop`](nivel_3_react_loop/) | **70%** | `read_file` + `cargo check` | `write_file` + `cargo test` | **ReAct Cerrado** | **100.0%** (Autocorrección verificada) |
-| **4** | `nivel_4_multi_agent` *(Próximo)* | **85%** | Roles especializados | DAG de Tareas | Comunicación Inter-Agente | En diseño |
+| **4** | [`nivel_4_multi_agent`](nivel_4_multi_agent/) | **85%** | Roles especializados | DAG de Tareas + RBAC | Supervisor + Mini-Loops | **100.0%** (Aprobado por Auditor) |
 | **5** | `nivel_5_autonomous_daemon` *(Próximo)* | **99%** | Watcher de Sistema | Daemon tokio select! | Always-On 24/7 | En diseño |
 
 ---
