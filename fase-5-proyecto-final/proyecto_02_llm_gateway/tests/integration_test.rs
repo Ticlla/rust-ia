@@ -191,10 +191,7 @@ async fn test_openai_api_endpoints() {
         }
     });
 
-    let state = Arc::new(AppState {
-        config: config.clone(),
-        scheduler,
-    });
+    let state = Arc::new(AppState::new(config.clone(), scheduler));
     let app = build_router(state);
 
     // 1. Test GET /v1/models
@@ -223,6 +220,7 @@ async fn test_openai_api_endpoints() {
     let json_bytes = serde_json::to_vec(&req_body).unwrap();
 
     let res = app
+        .clone()
         .oneshot(
             Request::builder()
                 .method("POST")
@@ -240,6 +238,20 @@ async fn test_openai_api_endpoints() {
     assert_eq!(completion.object, "chat.completion");
     assert!(!completion.choices.is_empty());
     assert!(!completion.choices[0].message.content.is_empty());
+
+    // 4. Test GET /metrics (Prometheus)
+    let res = app
+        .clone()
+        .oneshot(Request::builder().uri("/metrics").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::OK);
+    let bytes = to_bytes(res.into_body(), 1024 * 1024).await.unwrap();
+    let metrics_text = String::from_utf8(bytes.to_vec()).unwrap();
+    assert!(metrics_text.contains("llm_gateway_requests_total 1"));
+    assert!(metrics_text.contains("llm_gateway_kv_cache_utilization_ratio"));
+    assert!(metrics_text.contains("llm_gateway_kv_cache_free_blocks"));
 
     cancel_token.notify_one();
 }

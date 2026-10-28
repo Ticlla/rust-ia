@@ -1,0 +1,179 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "⚡ Métricas Principales del Mesh de IA",
+      "type": "row"
+    },
+    {
+      "id": 1,
+      "title": "Total Peticiones Gateway",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "expr": "llm_gateway_requests_total",
+          "legendFormat": "Peticiones",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Recuperaciones RAG Mesh",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "targets": [
+        {
+          "expr": "llm_gateway_rag_retrievals_total",
+          "legendFormat": "RAG Hits",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Búsquedas RAG Engine",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "targets": [
+        {
+          "expr": "rag_engine_searches_total",
+          "legendFormat": "Búsquedas",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "purple", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Chunks Vectorizados en Memoria",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "targets": [
+        {
+          "expr": "rag_engine_chunks_total",
+          "legendFormat": "Chunks",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "orange", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "🧠 Rendimiento del Servidor y Memoria KV-Cache",
+      "type": "row"
+    },
+    {
+      "id": 5,
+      "title": "Utilización Paged KV-Cache (%)",
+      "type": "gauge",
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "expr": "llm_gateway_kv_cache_utilization_ratio * 100",
+          "legendFormat": "Uso de Memoria KV",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Bloques Paged KV-Cache (Libres vs Usados)",
+      "type": "timeseries",
+      "gridPos": { "h": 7, "w": 16, "x": 8, "y": 6 },
+      "targets": [
+        {
+          "expr": "llm_gateway_kv_cache_free_blocks",
+          "legendFormat": "Bloques Libres",
+          "refId": "A"
+        },
+        {
+          "expr": "llm_gateway_kv_cache_used_blocks",
+          "legendFormat": "Bloques Usados",
+          "refId": "B"
+        }
+      ]
+    }
+  ],
+  "refresh": "3s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["rust", "ai", "rag", "vllm"],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "title": "Rust AI Systems — Observabilidad de Producción",
+  "uid": "rust-ai-mesh-metrics"
+}

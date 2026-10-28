@@ -6,7 +6,6 @@ use proyecto_01_rag_engine::config::RagConfig;
 use proyecto_01_rag_engine::engine::EnterpriseRagEngine;
 use proyecto_01_rag_engine::ingestion::Document;
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
@@ -71,10 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("    -> 4 Documentos empresariales indexados exitosamente.");
     println!("    -> {} Chunks generados en memoria.", chunks_created);
 
-    let state = Arc::new(AppState {
-        engine: Arc::new(RwLock::new(engine)),
-        start_time: Instant::now(),
-    });
+    let state = Arc::new(AppState::new(Arc::new(RwLock::new(engine))));
 
     let app = build_router(state);
     let addr = format!("0.0.0.0:{}", config.server_port);
@@ -82,6 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n[3] Servidor HTTP listo y escuchando en: http://{}", addr);
     println!("    - GET  /health           -> Verificación de salud y estadísticas");
+    println!("    - GET  /metrics          -> Exportador de métricas OpenMetrics / Prometheus");
     println!("    - GET  /api/v1/stats     -> Métricas del índice");
     println!("    - POST /api/v1/documents -> Ingesta dinámica de documentos");
     println!("    - POST /api/v1/search    -> Búsqueda híbrida (Dense, Sparse, Hybrid, Rerank)");

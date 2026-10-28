@@ -1,6 +1,6 @@
 # ==============================================================================
-# FASE 6 — PARTE 2: ORQUESTACIÓN MULTI-SERVICIO CON DOCKER COMPOSE
-# Stack de Producción: Enterprise RAG Engine + High-Throughput LLM Gateway
+# FASE 6 — PARTE 3: OBSERVABILIDAD INDUSTRIAL CON PROMETHEUS Y GRAFANA
+# Stack de Producción: Enterprise RAG + LLM Gateway + Prometheus + Grafana
 # ==============================================================================
 
 services:
@@ -67,6 +67,61 @@ services:
         limits:
           cpus: "1.0"
           memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # Servicio 3: Prometheus (Recolección y Agregación de Métricas /metrics)
+  # ----------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ai-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    networks:
+      - ai-mesh-network
+    restart: unless-stopped
+    depends_on:
+      - rag-engine
+      - llm-gateway
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # Servicio 4: Grafana (Dashboards en Tiempo Real para el Stack de IA)
+  # ----------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ai-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    networks:
+      - ai-mesh-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
 # ------------------------------------------------------------------------------
 # Red Aislada de Comunicación Interna (Service Discovery por DNS)

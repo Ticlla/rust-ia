@@ -14,6 +14,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
@@ -22,11 +23,25 @@ use uuid::Uuid;
 pub struct AppState {
     pub config: GatewayConfig,
     pub scheduler: Arc<ContinuousBatchScheduler>,
+    pub requests_total: AtomicU64,
+    pub rag_retrievals_total: AtomicU64,
+}
+
+impl AppState {
+    pub fn new(config: GatewayConfig, scheduler: Arc<ContinuousBatchScheduler>) -> Self {
+        Self {
+            config,
+            scheduler,
+            requests_total: AtomicU64::new(0),
+            rag_retrievals_total: AtomicU64::new(0),
+        }
+    }
 }
 
 pub fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health", get(health_handler))
+        .route("/metrics", get(metrics_handler))
         .route("/v1/models", get(models_handler))
         .route("/v1/chat/completions", post(chat_completions_handler))
         .with_state(state)
@@ -46,6 +61,59 @@ async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
         "free_blocks": cache.allocator.num_free_blocks(),
         "used_blocks": cache.allocator.num_used_blocks(),
     }))
+}
+
+async fn metrics_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let cache = state.scheduler.paged_cache.lock().await;
+    let waiting = state.scheduler.waiting_queue.lock().await;
+    let running = state.scheduler.running_sequences.lock().await;
+
+    let requests = state.requests_total.load(Ordering::Relaxed);
+    let rag_retrievals = state.rag_retrievals_total.load(Ordering::Relaxed);
+    let mem_util = cache.allocator.memory_utilization();
+    let free_blocks = cache.allocator.num_free_blocks();
+    let used_blocks = cache.allocator.num_used_blocks();
+    let waiting_count = waiting.len();
+    let running_count = running.len();
+
+    let body = format!(
+        "# HELP llm_gateway_requests_total Total de peticiones HTTP procesadas por el Gateway\n\
+         # TYPE llm_gateway_requests_total counter\n\
+         llm_gateway_requests_total {}\n\n\
+         # HELP llm_gateway_rag_retrievals_total Peticiones donde se recuperó contexto de RAG\n\
+         # TYPE llm_gateway_rag_retrievals_total counter\n\
+         llm_gateway_rag_retrievals_total {}\n\n\
+         # HELP llm_gateway_kv_cache_utilization_ratio Ratio de utilización del Paged KV-Cache\n\
+         # TYPE llm_gateway_kv_cache_utilization_ratio gauge\n\
+         llm_gateway_kv_cache_utilization_ratio {:.4}\n\n\
+         # HELP llm_gateway_kv_cache_free_blocks Bloques libres en el gestor de memoria Paged KV-Cache\n\
+         # TYPE llm_gateway_kv_cache_free_blocks gauge\n\
+         llm_gateway_kv_cache_free_blocks {}\n\n\
+         # HELP llm_gateway_kv_cache_used_blocks Bloques en uso en el gestor de memoria Paged KV-Cache\n\
+         # TYPE llm_gateway_kv_cache_used_blocks gauge\n\
+         llm_gateway_kv_cache_used_blocks {}\n\n\
+         # HELP llm_gateway_waiting_requests Peticiones esperando en cola del scheduler\n\
+         # TYPE llm_gateway_waiting_requests gauge\n\
+         llm_gateway_waiting_requests {}\n\n\
+         # HELP llm_gateway_running_requests Secuencias activas ejecutándose concurrentemente\n\
+         # TYPE llm_gateway_running_requests gauge\n\
+         llm_gateway_running_requests {}\n",
+        requests,
+        rag_retrievals,
+        mem_util,
+        free_blocks,
+        used_blocks,
+        waiting_count,
+        running_count,
+    );
+
+    (
+        [(
+            axum::http::header::CONTENT_TYPE,
+            "text/plain; version=0.0.4; charset=utf-8",
+        )],
+        body,
+    )
 }
 
 async fn models_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -69,6 +137,7 @@ async fn chat_completions_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<Response, (StatusCode, String)> {
+    state.requests_total.fetch_add(1, Ordering::Relaxed);
     let mut messages = payload.messages.clone();
 
     // 0. Pipeline RAG Automático: Si RAG_SERVICE_URL está presente, recuperar contexto por la red interna
@@ -87,6 +156,7 @@ async fn chat_completions_handler(
                         if let Ok(rag_json) = rag_resp.json::<serde_json::Value>().await {
                             if let Some(hits) = rag_json["hits"].as_array() {
                                 if !hits.is_empty() {
+                                    state.rag_retrievals_total.fetch_add(1, Ordering::Relaxed);
                                     let mut context_text = String::from(
                                         "INFORMACIÓN RECUPERADA DE LA BASE DE CONOCIMIENTO (RAG EN MEMORIA):\n"
                                     );

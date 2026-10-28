@@ -9,6 +9,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
@@ -16,11 +17,25 @@ use tokio::sync::RwLock;
 pub struct AppState {
     pub engine: Arc<RwLock<EnterpriseRagEngine>>,
     pub start_time: Instant,
+    pub searches_total: AtomicU64,
+    pub ingests_total: AtomicU64,
+}
+
+impl AppState {
+    pub fn new(engine: Arc<RwLock<EnterpriseRagEngine>>) -> Self {
+        Self {
+            engine,
+            start_time: Instant::now(),
+            searches_total: AtomicU64::new(0),
+            ingests_total: AtomicU64::new(0),
+        }
+    }
 }
 
 pub fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health", get(health_handler))
+        .route("/metrics", get(metrics_handler))
         .route("/api/v1/documents", post(ingest_handler))
         .route("/api/v1/search", post(search_handler))
         .route("/api/v1/stats", get(stats_handler))
@@ -39,6 +54,53 @@ async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
     })
 }
 
+async fn metrics_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let engine = state.engine.read().await;
+    let stats = engine.stats();
+    let uptime_secs = state.start_time.elapsed().as_secs();
+    let searches = state.searches_total.load(Ordering::Relaxed);
+    let ingests = state.ingests_total.load(Ordering::Relaxed);
+
+    let body = format!(
+        "# HELP rag_engine_uptime_seconds Tiempo de actividad del motor RAG en segundos\n\
+         # TYPE rag_engine_uptime_seconds gauge\n\
+         rag_engine_uptime_seconds {}\n\n\
+         # HELP rag_engine_documents_total Total de documentos cargados en el índice RAG\n\
+         # TYPE rag_engine_documents_total gauge\n\
+         rag_engine_documents_total {}\n\n\
+         # HELP rag_engine_chunks_total Total de fragmentos de texto vectorizados en memoria\n\
+         # TYPE rag_engine_chunks_total gauge\n\
+         rag_engine_chunks_total {}\n\n\
+         # HELP rag_engine_dense_vectors_total Total de vectores densos indexados\n\
+         # TYPE rag_engine_dense_vectors_total gauge\n\
+         rag_engine_dense_vectors_total {}\n\n\
+         # HELP rag_engine_bm25_terms_total Total de términos indexados en el índice invertido BM25\n\
+         # TYPE rag_engine_bm25_terms_total gauge\n\
+         rag_engine_bm25_terms_total {}\n\n\
+         # HELP rag_engine_searches_total Cantidad acumulada de búsquedas híbridas ejecutadas\n\
+         # TYPE rag_engine_searches_total counter\n\
+         rag_engine_searches_total {}\n\n\
+         # HELP rag_engine_ingests_total Cantidad acumulada de operaciones de ingesta de documentos\n\
+         # TYPE rag_engine_ingests_total counter\n\
+         rag_engine_ingests_total {}\n",
+        uptime_secs,
+        stats.total_documents,
+        stats.total_chunks,
+        stats.dense_vectors_indexed,
+        stats.bm25_terms_indexed,
+        searches,
+        ingests,
+    );
+
+    (
+        [(
+            axum::http::header::CONTENT_TYPE,
+            "text/plain; version=0.0.4; charset=utf-8",
+        )],
+        body,
+    )
+}
+
 async fn stats_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let engine = state.engine.read().await;
     Json(engine.stats())
@@ -54,6 +116,7 @@ async fn ingest_handler(
     let mut engine = state.engine.write().await;
     match engine.ingest_documents(payload.documents) {
         Ok(chunks_created) => {
+            state.ingests_total.fetch_add(1, Ordering::Relaxed);
             let duration_ms = start.elapsed().as_secs_f64() * 1000.0;
             Ok((
                 StatusCode::CREATED,
@@ -81,6 +144,7 @@ async fn search_handler(
 
     match engine.search(&payload.query, payload.top_k, payload.mode) {
         Ok(hits) => {
+            state.searches_total.fetch_add(1, Ordering::Relaxed);
             let duration_ms = start.elapsed().as_secs_f64() * 1000.0;
             let total_hits = hits.len();
             Ok(Json(SearchResponse {

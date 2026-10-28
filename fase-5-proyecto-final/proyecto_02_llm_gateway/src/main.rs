@@ -152,10 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let state = Arc::new(AppState {
-        config: config.clone(),
-        scheduler,
-    });
+    let state = Arc::new(AppState::new(config.clone(), scheduler));
 
     let app = build_router(state);
     let listener = TcpListener::bind(&addr).await?;

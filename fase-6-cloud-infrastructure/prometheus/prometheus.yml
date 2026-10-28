@@ -1,0 +1,34 @@
+# ==============================================================================
+# PROMETHEUS SCRAPE CONFIGURATION — AI MESH NETWORK
+# ==============================================================================
+
+global:
+  scrape_interval: 3s
+  evaluation_interval: 3s
+
+scrape_configs:
+  # ----------------------------------------------------------------------------
+  # Job 1: Enterprise Hybrid RAG Engine (Axum + Candle + SIMD)
+  # ----------------------------------------------------------------------------
+  - job_name: "ai-rag-engine"
+    metrics_path: "/metrics"
+    scrape_interval: 3s
+    static_configs:
+      - targets: ["rag-engine:3000"]
+        labels:
+          service: "rag-engine"
+          tier: "knowledge-retrieval"
+          env: "production"
+
+  # ----------------------------------------------------------------------------
+  # Job 2: High-Throughput LLM Gateway (vLLM en Rust + Paged KV-Cache + SSE)
+  # ----------------------------------------------------------------------------
+  - job_name: "ai-llm-gateway"
+    metrics_path: "/metrics"
+    scrape_interval: 3s
+    static_configs:
+      - targets: ["llm-gateway:8081"]
+        labels:
+          service: "llm-gateway"
+          tier: "inference-serving"
+          env: "production"
