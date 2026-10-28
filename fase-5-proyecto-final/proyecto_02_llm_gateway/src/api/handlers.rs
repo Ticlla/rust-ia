@@ -69,6 +69,47 @@ async fn chat_completions_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<Response, (StatusCode, String)> {
+    // 0. Si existe NVIDIA_API_KEY configurada, reenviar la inferencia a Nemotron en vivo
+    if let Ok(api_key) = std::env::var("NVIDIA_API_KEY") {
+        if !api_key.trim().is_empty() {
+            let model = std::env::var("NVIDIA_MODEL")
+                .unwrap_or_else(|_| "nvidia/nemotron-3.5-bolt-e4b".to_string());
+
+            let client = reqwest::Client::new();
+            let max_tokens = if payload.max_tokens == 0 { 256 } else { payload.max_tokens };
+            let body = serde_json::json!({
+                "model": model,
+                "messages": payload.messages,
+                "temperature": payload.temperature,
+                "max_tokens": max_tokens,
+            });
+
+            let res = client
+                .post("https://integrate.api.nvidia.com/v1/chat/completions")
+                .header("Authorization", format!("Bearer {}", api_key.trim()))
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send()
+                .await;
+
+            match res {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        if let Ok(json_body) = resp.json::<serde_json::Value>().await {
+                            return Ok(Json(json_body).into_response());
+                        }
+                    } else {
+                        let err_text = resp.text().await.unwrap_or_default();
+                        eprintln!("Error de upstream Nemotron: {}", err_text);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Fallo de red conectando con upstream Nemotron: {}", e);
+                }
+            }
+        }
+    }
+
     // 1. Construir prompt a partir del historial de mensajes
     let mut prompt = String::new();
     for msg in &payload.messages {

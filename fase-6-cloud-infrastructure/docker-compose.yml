@@ -48,6 +48,8 @@ services:
       - RUST_LOG=info
       - PORT=8081
       - RAG_SERVICE_URL=http://rag-engine:3000
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-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}
+      - NVIDIA_MODEL=nvidia/nemotron-3.5-bolt-e4b
     networks:
       - ai-mesh-network
     depends_on:
