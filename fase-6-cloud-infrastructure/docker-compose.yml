@@ -1,6 +1,6 @@
 # ==============================================================================
-# FASE 6 — PARTE 3: OBSERVABILIDAD INDUSTRIAL CON PROMETHEUS Y GRAFANA
-# Stack de Producción: Enterprise RAG + LLM Gateway + Prometheus + Grafana
+# FASE 6 — PARTE 3+: OBSERVABILIDAD TOTAL: MÉTRICAS (PROMETHEUS/GRAFANA) + LOGS (ELK)
+# Stack de Producción: RAG + LLM Gateway + Prometheus + Grafana + Elasticsearch + Kibana
 # ==============================================================================
 
 services:
@@ -97,7 +97,7 @@ services:
           memory: 256M
 
   # ----------------------------------------------------------------------------
-  # Servicio 4: Grafana (Dashboards en Tiempo Real para el Stack de IA)
+  # Servicio 4: Grafana (Dashboards Numéricos en Tiempo Real)
   # ----------------------------------------------------------------------------
   grafana:
     image: grafana/grafana:latest
@@ -122,6 +122,49 @@ services:
         limits:
           cpus: "0.5"
           memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # Servicio 5: Elasticsearch (Motor de Búsqueda y Almacén de Logs Centralizado)
+  # ----------------------------------------------------------------------------
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: ai-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    networks:
+      - ai-mesh-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  # ----------------------------------------------------------------------------
+  # Servicio 6: Kibana (Buscador y Visualizador Textual de Logs)
+  # ----------------------------------------------------------------------------
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    container_name: ai-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_SSL_VERIFICATIONMODE=none
+    ports:
+      - "5601:5601"
+    networks:
+      - ai-mesh-network
+    restart: unless-stopped
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
 # ------------------------------------------------------------------------------
 # Red Aislada de Comunicación Interna (Service Discovery por DNS)
