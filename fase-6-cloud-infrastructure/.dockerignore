@@ -1,0 +1,13 @@
+# Ignorar directorios pesados y temporales para optimizar el Build Context de Docker
+target/
+**/target/
+.git/
+.github/
+models/
+*.onnx
+*.safetensors
+*.bin
+*.log
+.gemini/
+.env
+tmp/

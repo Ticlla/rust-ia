@@ -1,0 +1,12 @@
+target/
+**/target/
+.git/
+.github/
+models/
+*.onnx
+*.safetensors
+*.bin
+*.log
+.gemini/
+.env
+tmp/

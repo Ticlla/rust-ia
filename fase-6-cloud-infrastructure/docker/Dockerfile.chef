@@ -1,0 +1,69 @@
+# ==============================================================================
+# DOCKERFILE MULTI-STAGE CON CARGO-CHEF PARA PRODUCCIÓN
+# Microservicio: Enterprise Hybrid RAG Engine (Axum + Candle + SIMD)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# ETAPA 1: Planner — Extraer la "receta" mínima de dependencias
+# ------------------------------------------------------------------------------
+FROM lukemathwalker/cargo-chef:latest-rust-1-bookworm AS planner
+WORKDIR /app
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ------------------------------------------------------------------------------
+# ETAPA 2: Cacher — Compilar y cachear todas las dependencias
+# ------------------------------------------------------------------------------
+FROM lukemathwalker/cargo-chef:latest-rust-1-bookworm AS cacher
+WORKDIR /app
+COPY --from=planner /app/recipe.json recipe.json
+# Cocinar dependencias en modo release (esta capa queda 100% cacheada por Docker)
+RUN cargo chef cook --release --recipe-path recipe.json -p proyecto_01_rag_engine
+
+# ------------------------------------------------------------------------------
+# ETAPA 3: Builder — Compilar el código fuente de nuestra aplicación
+# ------------------------------------------------------------------------------
+FROM lukemathwalker/cargo-chef:latest-rust-1-bookworm AS builder
+WORKDIR /app
+COPY --from=cacher /app/target target
+COPY --from=cacher /usr/local/cargo /usr/local/cargo
+COPY . .
+# Solo compila el código fuente en src/ (tarda 2-5 segundos si las dependencias no cambiaron)
+RUN cargo build --release -p proyecto_01_rag_engine
+
+# ------------------------------------------------------------------------------
+# ETAPA 4: Runtime — Imagen final minimalista de producción (< 35 MB)
+# ------------------------------------------------------------------------------
+FROM debian:bookworm-slim AS runtime
+
+# Instalar dependencias esenciales de sistema (certificados TLS) y herramientas de salud
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear un usuario sin privilegios de root por seguridad (Principle of Least Privilege)
+RUN groupadd -g 10001 appgroup && \
+    useradd -u 10001 -g appgroup -s /bin/sh -M appuser
+
+WORKDIR /app
+
+# Copiar el binario compilado desde la etapa builder
+COPY --from=builder /app/target/release/proyecto_01_rag_engine /usr/local/bin/rag_engine
+
+# Asignar permisos al usuario no root
+RUN chown -R appuser:appgroup /app /usr/local/bin/rag_engine
+
+# Configurar variables de entorno y puertos de producción
+ENV RUST_LOG=info
+ENV RAG_PORT=3000
+EXPOSE 3000
+
+# Cambiar a usuario sin privilegios
+USER appuser
+
+# Healthcheck de producción
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/rag_engine"]
