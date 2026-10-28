@@ -69,7 +69,48 @@ async fn chat_completions_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<Response, (StatusCode, String)> {
-    // 0. Si existe NVIDIA_API_KEY configurada, reenviar la inferencia a Nemotron en vivo
+    let mut messages = payload.messages.clone();
+
+    // 0. Pipeline RAG Automático: Si RAG_SERVICE_URL está presente, recuperar contexto por la red interna
+    if let Ok(rag_url) = std::env::var("RAG_SERVICE_URL") {
+        if !rag_url.trim().is_empty() {
+            if let Some(user_msg) = payload.messages.iter().rev().find(|m| m.role == "user") {
+                let client = reqwest::Client::new();
+                let search_body = serde_json::json!({
+                    "query": user_msg.content,
+                    "top_k": 2
+                });
+                let search_url = format!("{}/api/v1/search", rag_url.trim_end_matches('/'));
+
+                if let Ok(rag_resp) = client.post(&search_url).json(&search_body).send().await {
+                    if rag_resp.status().is_success() {
+                        if let Ok(rag_json) = rag_resp.json::<serde_json::Value>().await {
+                            if let Some(hits) = rag_json["hits"].as_array() {
+                                if !hits.is_empty() {
+                                    let mut context_text = String::from(
+                                        "INFORMACIÓN RECUPERADA DE LA BASE DE CONOCIMIENTO (RAG EN MEMORIA):\n"
+                                    );
+                                    for (idx, hit) in hits.iter().enumerate() {
+                                        let title = hit["doc_title"].as_str().unwrap_or("Documento");
+                                        let text = hit["text"].as_str().unwrap_or("");
+                                        context_text.push_str(&format!("[Fuente {}: {}]\n{}\n\n", idx + 1, title, text));
+                                    }
+                                    context_text.push_str("INSTRUCCIÓN: Responde a la pregunta del usuario utilizando como base los hechos verificados del contexto recuperado arriba.");
+
+                                    messages.insert(0, ChatMessage {
+                                        role: "system".to_string(),
+                                        content: context_text,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 1. Si existe NVIDIA_API_KEY configurada, reenviar la inferencia a Nemotron con el contexto aumentado
     if let Ok(api_key) = std::env::var("NVIDIA_API_KEY") {
         if !api_key.trim().is_empty() {
             let model = std::env::var("NVIDIA_MODEL")
@@ -79,7 +120,7 @@ async fn chat_completions_handler(
             let max_tokens = if payload.max_tokens == 0 { 256 } else { payload.max_tokens };
             let body = serde_json::json!({
                 "model": model,
-                "messages": payload.messages,
+                "messages": messages,
                 "temperature": payload.temperature,
                 "max_tokens": max_tokens,
             });
@@ -110,9 +151,9 @@ async fn chat_completions_handler(
         }
     }
 
-    // 1. Construir prompt a partir del historial de mensajes
+    // 2. Fallback: Construir prompt a partir de messages para el motor local continuo
     let mut prompt = String::new();
-    for msg in &payload.messages {
+    for msg in &messages {
         prompt.push_str(&format!("{}: {}\n", msg.role, msg.content));
     }
     prompt.push_str("assistant: ");
