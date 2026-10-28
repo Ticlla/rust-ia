@@ -60,7 +60,7 @@ flowchart LR
 | **2** | [`nivel_2_tool_caller`](nivel_2_tool_caller/) | **35%** | Esquemas de Tools | `write_file` (1 tiro) | Ninguno | **Frágil / 0%** (Falla de escape fatal) |
 | **3** | [`nivel_3_react_loop`](nivel_3_react_loop/) | **70%** | `read_file` + `cargo check` | `write_file` + `cargo test` | **ReAct Cerrado** | **100.0%** (Autocorrección verificada) |
 | **4** | [`nivel_4_multi_agent`](nivel_4_multi_agent/) | **85%** | Roles especializados | DAG de Tareas + RBAC | Supervisor + Mini-Loops | **100.0%** (Aprobado por Auditor) |
-| **5** | `nivel_5_autonomous_daemon` *(Próximo)* | **99%** | Watcher de Sistema | Daemon tokio select! | Always-On 24/7 | En diseño |
+| **5** | [`nivel_5_autonomous_daemon`](nivel_5_autonomous_daemon/) | **99%** | Watcher de Sistema (200ms) | Auto-Sanación de Emergencia | Always-On Tokio select! | **100.0%** (Zero Human in the Loop) |
 
 ---
 
@@ -82,6 +82,14 @@ flowchart LR
 * **Comportamiento:** Bucle iterativo de 5 pasos: lee el archivo $\rightarrow$ corre `cargo check` $\rightarrow$ recibe `error[E0308]` $\rightarrow$ aplica el parche $\rightarrow$ comprueba compilación $\rightarrow$ ejecuta `cargo test`.
 * **Lección:** **El verdadero umbral de la agenticidad.** El agente no depende de la suerte; prueba, observa el error del compilador, se autocorrige y persiste hasta que las pruebas unitarias pasan en disco.
 
+### Nivel 4: Multi-Agent Collaboration & DAGs ([`nivel_4_multi_agent`](nivel_4_multi_agent/))
+* **Comportamiento:** El Supervisor divide la meta en un grafo causal (Task DAG) ejecutado topológicamente con roles estrictos: `Analyzer` (solo lectura) $\rightarrow$ `Coder` (escritura) $\rightarrow$ `Auditor` (pruebas independientes).
+* **Lección:** Elimina el sesgo de auto-aprobación y la degradación de contexto en problemas complejos mediante el principio de mínimo privilegio (RBAC).
+
+### Nivel 5: Demonio Autónomo 24/7 & Auto-Sanación ([`nivel_5_autonomous_daemon`](nivel_5_autonomous_daemon/))
+* **Comportamiento:** Demonio en segundo plano con `tokio::select!` que monitoriza la salud cada 200 ms. Ante una corrupción externa, se auto-activa de forma proactiva sin intervención humana, repara el servicio y registra la auditoría con MTTR.
+* **Lección:** **La cúspide de la autonomía (Zero-Human-in-the-Loop).** El sistema no espera instrucciones; convive y auto-sana los sistemas en producción.
+
 ---
 
 ## 4. Guía Rápida de Comandos
@@ -99,6 +107,12 @@ cargo run --manifest-path fase-5-proyecto-final/Cargo.toml --release -p nivel_2_
 # Nivel 3 (ReAct Loop con Nemotron)
 NVIDIA_API_KEY="tu_api_key" cargo run --manifest-path fase-5-proyecto-final/Cargo.toml --release -p nivel_3_react_loop
 
-# Ejecutar el microservicio reparado por Nivel 3
+# Nivel 4 (Multi-Agent Task DAG con Nemotron)
+NVIDIA_API_KEY="tu_api_key" cargo run --manifest-path fase-5-proyecto-final/Cargo.toml --release -p nivel_4_multi_agent
+
+# Nivel 5 (Demonio Autónomo 24/7 con Nemotron)
+NVIDIA_API_KEY="tu_api_key" cargo run --manifest-path fase-5-proyecto-final/Cargo.toml --release -p nivel_5_autonomous_daemon
+
+# Ejecutar el microservicio reparado
 cargo run --manifest-path fase-5-proyecto-final/proyecto_05_agenticidad/sandbox/broken_service/Cargo.toml
 ```
