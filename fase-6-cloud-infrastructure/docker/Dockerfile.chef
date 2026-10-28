@@ -28,6 +28,7 @@ WORKDIR /app
 COPY --from=cacher /app/target target
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
 COPY . .
+
 # Solo compila el código fuente en src/ (tarda 2-5 segundos si las dependencias no cambiaron)
 RUN cargo build --release -p proyecto_01_rag_engine
 

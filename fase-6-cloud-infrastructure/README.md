@@ -9,7 +9,7 @@
 ## 🗺️ Hoja de Ruta de la Fase 6
 
 - [x] **Parte 1:** Dockerización Multi-Stage de Alto Rendimiento con `cargo-chef`
-- [ ] **Parte 2:** Orquestación Multi-Servicio con Docker Compose y Redes Aisladas
+- [x] **Parte 2:** Orquestación Multi-Servicio con Docker Compose y Redes Aisladas
 - [ ] **Parte 3:** Observabilidad y Métricas con Prometheus (`/metrics`) y Grafana
 - [ ] **Parte 4:** Resiliencia, Pruebas de Carga Concurrente (`k6` / `wrk`) y Rate Limiting
 - [ ] **Parte 5:** Pipeline de CI/CD Automatizado con GitHub Actions
@@ -75,3 +75,67 @@ curl -s -X POST http://localhost:3000/api/v1/search \
 ```bash
 docker stats --no-stream rag-production
 ```
+
+---
+
+## 🌐 Parte 2: Orquestación Multi-Servicio con Docker Compose
+
+La arquitectura industrial se compone de dos microservicios complementarios comunicados a través de una red interna bridge (`ai-mesh-network`):
+
+1. **`ai-rag-engine` (Puerto 3000):** Servidor de búsqueda semántica híbrida (Candle + BM25 + SIMD).
+2. **`ai-llm-gateway` (Puerto 8081):** Servidor de inferencia LLM OpenAI-compatible con continuous batching y paged KV-cache.
+
+### Arquitectura de Malla (Service Discovery)
+
+```mermaid
+flowchart LR
+    Client["Cliente / Internet"] --> HostPorts
+    
+    subgraph HostPorts ["Puertos Expuestos"]
+        P3000["Puerto 3000"]
+        P8081["Puerto 8081"]
+    end
+
+    subgraph DockerNet ["Red Interna: ai-mesh-network"]
+        RAG["📦 ai-rag-engine<br/>DNS: http://rag-engine:3000<br/>RAM: 2.3 MiB"]
+        GW["📦 ai-llm-gateway<br/>DNS: http://llm-gateway:8081<br/>RAM: 2.6 MiB"]
+
+        GW -->|"DNS Interno"| RAG
+    end
+
+    P3000 --> RAG
+    P8081 --> GW
+```
+
+### Métricas Reales del Stack Multi-Servicio en Ejecución
+
+* **Consumo de Memoria RAG Engine:** **2.34 MiB**
+* **Consumo de Memoria LLM Gateway:** **2.66 MiB**
+* **Consumo Total de Memoria RAM del Stack:** **~5.0 MiB** (para ambos microservicios corriendo en paralelo).
+* **Gobernanza de Recursos:** Límites estrictos asignados (`256M` y `512M`, `cpus: "1.0"`).
+* **Service Discovery:** Probado exitosamente ejecutando `curl http://rag-engine:3000/health` desde dentro del contenedor `llm-gateway`.
+
+### Comandos de Docker Compose:
+
+```bash
+# Iniciar todo el stack en segundo plano
+docker compose -f fase-6-cloud-infrastructure/docker-compose.yml up -d
+
+# Ver el estado y salud de los contenedores
+docker compose -f fase-6-cloud-infrastructure/docker-compose.yml ps
+
+# Probar la comunicación interna por DNS entre contenedores
+docker exec ai-llm-gateway curl -s http://rag-engine:3000/health | jq .
+
+# Consultar el LLM Gateway con especificación de OpenAI
+curl -s -X POST http://localhost:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "smollm2-135m", "messages": [{"role": "user", "content": "Hola desde la malla"}]}' | jq .
+
+# Ver el consumo combinado de recursos de ambos servicios
+docker stats --no-stream ai-rag-engine ai-llm-gateway
+
+# Detener el stack
+docker compose -f fase-6-cloud-infrastructure/docker-compose.yml down
+```
+

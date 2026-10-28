@@ -1,0 +1,74 @@
+# ==============================================================================
+# FASE 6 — PARTE 2: ORQUESTACIÓN MULTI-SERVICIO CON DOCKER COMPOSE
+# Stack de Producción: Enterprise RAG Engine + High-Throughput LLM Gateway
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Servicio 1: Enterprise Hybrid RAG Engine (Axum + Candle + SIMD)
+  # ----------------------------------------------------------------------------
+  rag-engine:
+    build:
+      context: ../fase-5-proyecto-final
+      dockerfile: ../fase-6-cloud-infrastructure/docker/Dockerfile.chef
+    image: ai-stack/rag-engine:latest
+    container_name: ai-rag-engine
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+      - RAG_PORT=3000
+    networks:
+      - ai-mesh-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # Servicio 2: High-Throughput LLM Gateway (vLLM en Rust + Paged KV-Cache + SSE)
+  # ----------------------------------------------------------------------------
+  llm-gateway:
+    build:
+      context: ../fase-5-proyecto-final
+      dockerfile: ../fase-6-cloud-infrastructure/docker/Dockerfile.gateway
+    image: ai-stack/llm-gateway:latest
+    container_name: ai-llm-gateway
+    ports:
+      - "8081:8081"
+    environment:
+      - RUST_LOG=info
+      - PORT=8081
+      - RAG_SERVICE_URL=http://rag-engine:3000
+    networks:
+      - ai-mesh-network
+    depends_on:
+      rag-engine:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+# ------------------------------------------------------------------------------
+# Red Aislada de Comunicación Interna (Service Discovery por DNS)
+# ------------------------------------------------------------------------------
+networks:
+  ai-mesh-network:
+    driver: bridge

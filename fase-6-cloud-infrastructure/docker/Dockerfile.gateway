@@ -1,0 +1,60 @@
+# ==============================================================================
+# DOCKERFILE MULTI-STAGE CON CARGO-CHEF PARA PRODUCCIÓN
+# Microservicio: High-Throughput LLM Serving Gateway (vLLM en Rust)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# ETAPA 1: Planner — Extraer receta mínima de dependencias
+# ------------------------------------------------------------------------------
+FROM lukemathwalker/cargo-chef:latest-rust-1-bookworm AS planner
+WORKDIR /app
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# ------------------------------------------------------------------------------
+# ETAPA 2: Cacher — Compilar y cachear dependencias del LLM Gateway
+# ------------------------------------------------------------------------------
+FROM lukemathwalker/cargo-chef:latest-rust-1-bookworm AS cacher
+WORKDIR /app
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json -p proyecto_02_llm_gateway
+
+# ------------------------------------------------------------------------------
+# ETAPA 3: Builder — Compilar el código fuente del Gateway
+# ------------------------------------------------------------------------------
+FROM lukemathwalker/cargo-chef:latest-rust-1-bookworm AS builder
+WORKDIR /app
+COPY --from=cacher /app/target target
+COPY --from=cacher /usr/local/cargo /usr/local/cargo
+COPY . .
+RUN cargo build --release -p proyecto_02_llm_gateway
+
+# ------------------------------------------------------------------------------
+# ETAPA 4: Runtime — Imagen minimalista de producción
+# ------------------------------------------------------------------------------
+FROM debian:bookworm-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 10001 appgroup && \
+    useradd -u 10001 -g appgroup -s /bin/sh -M appuser
+
+WORKDIR /app
+
+COPY --from=builder /app/target/release/proyecto_02_llm_gateway /usr/local/bin/llm_gateway
+
+RUN chown -R appuser:appgroup /app /usr/local/bin/llm_gateway
+
+ENV RUST_LOG=info
+ENV PORT=8081
+EXPOSE 8081
+
+USER appuser
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8081/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/llm_gateway"]
