@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-stack-config
+  namespace: ai-production
+  labels:
+    app.kubernetes.io/part-of: ai-mesh
+data:
+  RUST_LOG: "info"
+  RAG_PORT: "3000"
+  PORT: "8081"
+  RAG_SERVICE_URL: "http://rag-service.ai-production.svc.cluster.local:3000"

@@ -10,9 +10,10 @@
 
 - [x] **Parte 1:** Dockerización Multi-Stage de Alto Rendimiento con `cargo-chef`
 - [x] **Parte 2:** Orquestación Multi-Servicio con Docker Compose y Redes Aisladas
-- [ ] **Parte 3:** Observabilidad y Métricas con Prometheus (`/metrics`) y Grafana
-- [ ] **Parte 4:** Resiliencia, Pruebas de Carga Concurrente (`k6` / `wrk`) y Rate Limiting
-- [ ] **Parte 5:** Pipeline de CI/CD Automatizado con GitHub Actions
+- [x] **Parte 3:** Observabilidad Total con Prometheus (`/metrics`), Grafana y ELK/Kibana
+- [x] **Parte 4:** Resiliencia, Token Bucket Rate Limiting (HTTP 429) y Graceful Shutdown
+- [x] **Parte 5:** Pipeline de CI/CD Automatizado con GitHub Actions (`.github/workflows/ci.yml`)
+- [ ] **Parte 6:** Despliegue Cloud en Kubernetes (K8s) con HPA y Probes
 
 ---
 

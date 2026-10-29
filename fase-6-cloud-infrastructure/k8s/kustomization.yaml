@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ai-production
+
+resources:
+  - 00-namespace.yaml
+  - 01-configmap.yaml
+  - 02-deployment-rag.yaml
+  - 03-service-rag.yaml
+  - 04-deployment-gateway.yaml
+  - 05-service-gateway.yaml
+  - 06-hpa-gateway.yaml
+  - 07-hpa-rag.yaml
