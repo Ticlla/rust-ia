@@ -7,9 +7,9 @@
 ## 🗺️ Vista General del Camino
 
 ```
-FASE 1          FASE 2           FASE 3            FASE 4           FASE 5
-Fundamentos  →  Sistemas     →   Datos & Numerics → IA & ML      →  Proyecto Final
-(4 semanas)     (4 semanas)      (4 semanas)        (6 semanas)      (6 semanas)
+FASE 1          FASE 2           FASE 3            FASE 4           FASE 5             FASE 6            FASE 7
+Fundamentos  →  Sistemas     →   Datos & Numerics → IA & ML      →  Proyectos Prod  →  Cloud & Ops    →  Fronteras Avanzadas
+(4 semanas)     (4 semanas)      (4 semanas)        (6 semanas)      (6 semanas)       (4 semanas)       (Deep Engineering)
 ```
 
 ---
@@ -394,6 +394,47 @@ Llevar los proyectos desarrollados en la Fase 5 al mundo real, implementando inf
 
 ---
 
+## 🔭 FASE 7 — Fronteras Avanzadas de IA en Rust (Deep Engineering)
+
+### Objetivo
+Dominar las tecnologías punteras que diferencian a un ingeniero de sistemas de IA senior: ejecución acelerada en hardware (GPU/WebGPU), cuantización extrema a 4 bits para modelos masivos, interoperabilidad nativa sin overhead con Python y el nuevo estándar abierto MCP (Model Context Protocol).
+
+### Módulos de la Fase 7
+
+#### 1. 🗜️ Cuantización Extrema y Modelos Masivos (GGUF, AWQ, INT4)
+* **Objetivo:** Ejecutar modelos de gran tamaño (Llama-3-8B, Mistral-7B, Qwen-2.5-7B) en hardware de consumo con baja RAM (4–6 GB).
+* **Conceptos:** Cuantización por bloques (Q4_0, Q4_K_M, Q8_0), escalas y de-cuantización dinámica sobre la marcha con SIMD.
+* **Stack:** `candle-transformers`, parser GGUF nativo en Rust, `half` (F16/BF16).
+
+#### 2. ⚡ Aceleración de Hardware Nativa (CUDA, Metal & WebGPU)
+* **Objetivo:** Superar la barrera de la CPU mediante kernels dedicados en GPU.
+* **Conceptos:** Gestión de memoria VRAM unificada, coalescencia de hilos GPU, MatMul optimizado en hardware.
+* **Stack:** `candle-kernels`, `cudarc` (bindings CUDA puros sin C++ runtime), y `wgpu` para portabilidad universal (Nvidia, Apple Metal, AMD ROCm).
+
+#### 3. 🐍 Interoperabilidad de Alto Rendimiento: Rust ⟷ Python (`PyO3` & `maturin`)
+* **Objetivo:** Crear paquetes nativos de alto rendimiento en Rust consumibles directamente desde Python con cero overhead.
+* **Conceptos:** Liberación del Global Interpreter Lock (GIL) de Python con `py.allow_threads`, conversión cero-copia entre `numpy.ndarray` y `ndarray` de Rust.
+* **Stack:** `pyo3`, `maturin`, `numpy`.
+
+#### 4. 🌐 Inferencia en el Borde y WebAssembly (Wasm & WASI-NN)
+* **Objetivo:** Desplegar modelos de IA que corran 100% en el cliente o en redes de distribución de contenido (CDN edge).
+* **Conceptos:** Compilación a target `wasm32-unknown-unknown`, WebAssembly SIMD de 128 bits, ejecución en navegador sin servidor backend.
+* **Stack:** `wasm-bindgen`, `wasi-nn`, `web-sys`.
+
+#### 5. 🔌 Protocolo Estándar MCP (Model Context Protocol)
+* **Objetivo:** Implementar la especificación abierta de Anthropic para interoperabilidad de agentes de IA con sistemas externos.
+* **Conceptos:** Servidores y Clientes MCP en Rust sobre JSON-RPC y stdio/SSE, registro universal de herramientas, recursos y prompts contextuales.
+* **Stack:** `tokio`, `serde_json`, `async-trait`.
+
+### 🎯 Checkpoint Fase 7
+- [ ] Cuantización local y ejecución de un modelo 7B/8B en formato GGUF (INT4)
+- [ ] Pipeline de inferencia acelerado por GPU (CUDA / WebGPU)
+- [ ] Módulo nativo compilado con `PyO3` e importable en Python (`import mi_motor_rust`)
+- [ ] Servidor MCP nativo en Rust conectado a herramientas de producción
+- [ ] Motor de inferencia compilado a WebAssembly para ejecución en cliente
+
+---
+
 ## 📅 Resumen del Plan Completo
 
 | Fase | Enfoque | Entregable Principal | Estado |
@@ -404,6 +445,7 @@ Llevar los proyectos desarrollados en la Fase 5 al mundo real, implementando inf
 | **4 — IA y Machine Learning** | Linfa, ONNX (`ort`), Tokenizers, Candle, KV-Cache | Servidor LLM con Token Streaming en Vivo | ✅ Completado |
 | **5 — Proyectos Production-Ready** | RAG Híbrido, vLLM Gateway, Multi-Agente, Visión/Audio Edge | Suite de 4 proyectos empresariales completos (21 tests) | ✅ Completado |
 | **6 — Deployment y Operaciones** | Docker chef, Observabilidad, CI/CD, Kubernetes HPA, Cloud SSL | **Infraestructura Cloud, K8s y Publicación SSL** | ✅ 100% Completado |
+| **7 — Fronteras Avanzadas** | GPU (CUDA/wgpu), Cuantización GGUF, PyO3 Python FFI, Wasm & MCP | **Deep AI Engineering en Rust** | 🎯 Próximo Objetivo |
 
 ---
 
