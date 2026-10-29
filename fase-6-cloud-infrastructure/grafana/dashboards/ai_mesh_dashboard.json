@@ -20,7 +20,7 @@
       "id": 1,
       "title": "Total Peticiones Gateway",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 1 },
       "targets": [
         {
           "expr": "llm_gateway_requests_total",
@@ -44,7 +44,7 @@
       "id": 2,
       "title": "Recuperaciones RAG Mesh",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 1 },
       "targets": [
         {
           "expr": "llm_gateway_rag_retrievals_total",
@@ -68,7 +68,7 @@
       "id": 3,
       "title": "Búsquedas RAG Engine",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 1 },
       "targets": [
         {
           "expr": "rag_engine_searches_total",
@@ -90,9 +90,9 @@
     },
     {
       "id": 4,
-      "title": "Chunks Vectorizados en Memoria",
+      "title": "Chunks en Memoria",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 15, "y": 1 },
       "targets": [
         {
           "expr": "rag_engine_chunks_total",
@@ -107,6 +107,31 @@
             "mode": "absolute",
             "steps": [
               { "color": "orange", "value": null }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 50,
+      "title": "⛔ Bloqueos Rate Limit (429)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 5, "x": 19, "y": 1 },
+      "targets": [
+        {
+          "expr": "llm_gateway_rate_limited_total",
+          "legendFormat": "Bloqueos 429",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
             ]
           }
         }
