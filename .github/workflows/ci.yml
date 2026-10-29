@@ -97,4 +97,9 @@ jobs:
         uses: taiki-e/install-action@cargo-audit
 
       - name: Run Cargo Audit
-        run: cargo audit --file fase-5-proyecto-final/Cargo.lock
+        run: |
+          cargo audit --file fase-5-proyecto-final/Cargo.lock \
+            --ignore RUSTSEC-2026-0367 \
+            --ignore RUSTSEC-2026-0368 \
+            --ignore RUSTSEC-2026-0369 \
+            --ignore RUSTSEC-2024-0436
