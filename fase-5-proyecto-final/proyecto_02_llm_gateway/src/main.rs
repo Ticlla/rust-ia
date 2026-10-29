@@ -103,7 +103,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("==============================================================================");
 
         let listener = TcpListener::bind(&addr).await?;
-        axum::serve(listener, app).await?;
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal())
+            .await?;
+        println!("✅ [LLM GATEWAY] Servidor apagado de forma limpia.");
         return Ok(());
     }
 
@@ -157,8 +160,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = build_router(state);
     let listener = TcpListener::bind(&addr).await?;
     println!("\n[3] Gateway Mock activo en: http://{}", addr);
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+    println!("✅ [LLM GATEWAY] Servidor apagado de forma limpia y segura.");
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Fallo al registrar listener de Ctrl+C");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Fallo al registrar listener de SIGTERM")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {
+            println!("\n🛑 [LLM GATEWAY] Señal Ctrl+C recibida. Drenando conexiones activas...");
+        },
+        _ = terminate => {
+            println!("\n🛑 [LLM GATEWAY] Señal SIGTERM recibida (Docker/K8s). Drenando conexiones activas...");
+        },
+    }
 }
 
 async fn real_health_handler(State(state): State<Arc<RealServerState>>) -> impl IntoResponse {

@@ -84,6 +84,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("    - POST /api/v1/search    -> Búsqueda híbrida (Dense, Sparse, Hybrid, Rerank)");
     println!("==============================================================================");
 
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
+    println!("✅ [RAG ENGINE] Servidor apagado de forma limpia y segura.");
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Fallo al registrar listener de Ctrl+C");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Fallo al registrar listener de SIGTERM")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {
+            println!("\n🛑 [RAG ENGINE] Señal Ctrl+C recibida. Drenando conexiones activas...");
+        },
+        _ = terminate => {
+            println!("\n🛑 [RAG ENGINE] Señal SIGTERM recibida (Docker/K8s). Drenando conexiones activas...");
+        },
+    }
 }
