@@ -239,7 +239,66 @@ async fn test_openai_api_endpoints() {
     assert!(!completion.choices.is_empty());
     assert!(!completion.choices[0].message.content.is_empty());
 
-    // 4. Test GET /metrics (Prometheus)
+    // 4. Test Token Bucket Rate Limiting (Agotar los 9 tokens restantes del burst)
+    for _ in 0..9 {
+        let req_body = ChatCompletionRequest {
+            model: "test-model".to_string(),
+            messages: vec![ChatMessage {
+                role: "user".to_string(),
+                content: "ping".to_string(),
+            }],
+            temperature: 0.7,
+            max_tokens: 4,
+            stream: false,
+        };
+        let json_bytes = serde_json::to_vec(&req_body).unwrap();
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("content-type", "application/json")
+                    .body(Body::from(json_bytes))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    // Petición 11: La cubeta de tokens está vacía -> Debe retornar HTTP 429 Too Many Requests
+    let req_body = ChatCompletionRequest {
+        model: "test-model".to_string(),
+        messages: vec![ChatMessage {
+            role: "user".to_string(),
+            content: "exceed rate limit".to_string(),
+        }],
+        temperature: 0.7,
+        max_tokens: 4,
+        stream: false,
+    };
+    let json_bytes = serde_json::to_vec(&req_body).unwrap();
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/v1/chat/completions")
+                .header("content-type", "application/json")
+                .body(Body::from(json_bytes))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(res.status(), StatusCode::TOO_MANY_REQUESTS);
+    let bytes = to_bytes(res.into_body(), 1024 * 1024).await.unwrap();
+    let err_json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(err_json["error"]["code"], 429);
+    assert_eq!(err_json["error"]["type"], "rate_limit_exceeded");
+
+    // 5. Test GET /metrics (Prometheus)
     let res = app
         .clone()
         .oneshot(Request::builder().uri("/metrics").body(Body::empty()).unwrap())
@@ -249,7 +308,8 @@ async fn test_openai_api_endpoints() {
     assert_eq!(res.status(), StatusCode::OK);
     let bytes = to_bytes(res.into_body(), 1024 * 1024).await.unwrap();
     let metrics_text = String::from_utf8(bytes.to_vec()).unwrap();
-    assert!(metrics_text.contains("llm_gateway_requests_total 1"));
+    assert!(metrics_text.contains("llm_gateway_requests_total 11"));
+    assert!(metrics_text.contains("llm_gateway_rate_limited_total 1"));
     assert!(metrics_text.contains("llm_gateway_kv_cache_utilization_ratio"));
     assert!(metrics_text.contains("llm_gateway_kv_cache_free_blocks"));
 

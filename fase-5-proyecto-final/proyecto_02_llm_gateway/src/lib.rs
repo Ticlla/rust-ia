@@ -5,9 +5,11 @@ pub mod api;
 pub mod config;
 pub mod model;
 pub mod paged_cache;
+pub mod resilience;
 pub mod scheduler;
 
 pub use config::GatewayConfig;
 pub use model::{GatewayTokenizer, GatewayTransformer};
 pub use paged_cache::{BlockAllocator, PagedKvCacheManager};
+pub use resilience::{TokenBucket, TokenBucketRateLimiter};
 pub use scheduler::{ContinuousBatchScheduler, Sequence};

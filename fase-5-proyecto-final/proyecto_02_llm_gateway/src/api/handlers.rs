@@ -17,6 +17,7 @@ use axum::{
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
+use crate::resilience::TokenBucketRateLimiter;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -25,6 +26,8 @@ pub struct AppState {
     pub scheduler: Arc<ContinuousBatchScheduler>,
     pub requests_total: AtomicU64,
     pub rag_retrievals_total: AtomicU64,
+    pub rate_limited_total: AtomicU64,
+    pub rate_limiter: Arc<TokenBucketRateLimiter>,
 }
 
 impl AppState {
@@ -34,6 +37,9 @@ impl AppState {
             scheduler,
             requests_total: AtomicU64::new(0),
             rag_retrievals_total: AtomicU64::new(0),
+            rate_limited_total: AtomicU64::new(0),
+            // Ráfaga permitida de 10 peticiones, recarga de 2 peticiones/segundo
+            rate_limiter: Arc::new(TokenBucketRateLimiter::new(10.0, 2.0)),
         }
     }
 }
@@ -70,6 +76,7 @@ async fn metrics_handler(State(state): State<Arc<AppState>>) -> impl IntoRespons
 
     let requests = state.requests_total.load(Ordering::Relaxed);
     let rag_retrievals = state.rag_retrievals_total.load(Ordering::Relaxed);
+    let rate_limited = state.rate_limited_total.load(Ordering::Relaxed);
     let mem_util = cache.allocator.memory_utilization();
     let free_blocks = cache.allocator.num_free_blocks();
     let used_blocks = cache.allocator.num_used_blocks();
@@ -83,6 +90,9 @@ async fn metrics_handler(State(state): State<Arc<AppState>>) -> impl IntoRespons
          # HELP llm_gateway_rag_retrievals_total Peticiones donde se recuperó contexto de RAG\n\
          # TYPE llm_gateway_rag_retrievals_total counter\n\
          llm_gateway_rag_retrievals_total {}\n\n\
+         # HELP llm_gateway_rate_limited_total Peticiones bloqueadas por superar el límite Token Bucket (HTTP 429)\n\
+         # TYPE llm_gateway_rate_limited_total counter\n\
+         llm_gateway_rate_limited_total {}\n\n\
          # HELP llm_gateway_kv_cache_utilization_ratio Ratio de utilización del Paged KV-Cache\n\
          # TYPE llm_gateway_kv_cache_utilization_ratio gauge\n\
          llm_gateway_kv_cache_utilization_ratio {:.4}\n\n\
@@ -100,6 +110,7 @@ async fn metrics_handler(State(state): State<Arc<AppState>>) -> impl IntoRespons
          llm_gateway_running_requests {}\n",
         requests,
         rag_retrievals,
+        rate_limited,
         mem_util,
         free_blocks,
         used_blocks,
@@ -138,6 +149,25 @@ async fn chat_completions_handler(
     Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<Response, (StatusCode, String)> {
     state.requests_total.fetch_add(1, Ordering::Relaxed);
+
+    // Escudo de Resiliencia: Control de admisión con Rate-Limiting (Token Bucket)
+    let client_id = "default_client";
+    if let Err(retry_after) = state.rate_limiter.check_admission(client_id) {
+        state.rate_limited_total.fetch_add(1, Ordering::Relaxed);
+        let err_json = serde_json::json!({
+            "error": {
+                "message": format!("Rate limit excedido (Token Bucket). Reintente en {:.1} segundos.", retry_after),
+                "type": "rate_limit_exceeded",
+                "code": 429
+            }
+        });
+        return Ok((
+            StatusCode::TOO_MANY_REQUESTS,
+            [(axum::http::header::RETRY_AFTER, format!("{:.0}", retry_after))],
+            Json(err_json),
+        ).into_response());
+    }
+
     let mut messages = payload.messages.clone();
 
     // 0. Pipeline RAG Automático: Si RAG_SERVICE_URL está presente, recuperar contexto por la red interna
