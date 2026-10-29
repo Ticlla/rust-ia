@@ -12,7 +12,7 @@ use axum::{
     Json, Router,
     extract::State,
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{Html, IntoResponse, Response},
     routing::{get, post},
 };
 use std::sync::Arc;
@@ -46,11 +46,16 @@ impl AppState {
 
 pub fn build_router(state: Arc<AppState>) -> Router {
     Router::new()
+        .route("/", get(chat_ui_handler))
         .route("/health", get(health_handler))
         .route("/metrics", get(metrics_handler))
         .route("/v1/models", get(models_handler))
         .route("/v1/chat/completions", post(chat_completions_handler))
         .with_state(state)
+}
+
+async fn chat_ui_handler() -> Html<&'static str> {
+    Html(include_str!("chat_ui.html"))
 }
 
 async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
