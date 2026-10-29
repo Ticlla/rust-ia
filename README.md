@@ -7,9 +7,9 @@
 ## 🗺️ Vista General del Camino
 
 ```
-FASE 1          FASE 2           FASE 3            FASE 4           FASE 5             FASE 6            FASE 7
-Fundamentos  →  Sistemas     →   Datos & Numerics → IA & ML      →  Proyectos Prod  →  Cloud & Ops    →  Fronteras Avanzadas
-(4 semanas)     (4 semanas)      (4 semanas)        (6 semanas)      (6 semanas)       (4 semanas)       (Deep Engineering)
+FASE 1          FASE 2           FASE 3            FASE 4           FASE 5             FASE 6             REPASO             FASE 7
+Fundamentos  →  Sistemas     →   Datos & Numerics → IA & ML      →  Proyectos Prod  →  Cloud & Ops    →  Consolidación  →  Fronteras Avanzadas
+(4 semanas)     (4 semanas)      (4 semanas)        (6 semanas)      (6 semanas)       (4 semanas)       (Teórico-Práctico) (Deep Engineering)
 ```
 
 ---
@@ -435,6 +435,33 @@ Dominar las tecnologías punteras que diferencian a un ingeniero de sistemas de 
 
 ---
 
+## 🧠 Temas Clave de Repaso y Consolidación Conceptual
+
+> **Propósito**: Profundizar y afianzar los conceptos fundamentales de ingeniería de sistemas antes de la Fase 7, garantizando comprensión total de cómo opera cada capa bajo el capó.
+
+### 📊 1. Observabilidad y Trazabilidad en Producción
+- [ ] **Métricas vs Logs vs Trazas**: Entender a fondo la diferencia de roles entre Prometheus (series temporales `/metrics`), Grafana (paneles visuales), Elasticsearch (almacén de documentos JSON) y Kibana (exploración interactiva).
+- [ ] **Métricas Críticas de LLM Serving**: Análisis de TTFT (Time To First Token), TPOT (Time Per Output Token), ratio de uso de KV-Cache y percentiles de latencia P50/P95/P99.
+- [ ] **Trazabilidad Asíncrona sin Bloqueo**: Cómo diseñar log shipping estructurado en Rust (`ship_log` con `tokio::spawn`) para visibilidad inmediata sin penalizar la latencia del cliente.
+
+### 🛡️ 2. Resiliencia, Rate Limiting y Control de Flujo
+- [ ] **Algoritmo Token Bucket**: Mecánica matemática del bucket: capacidad de ráfaga (*burst*), tasa de recarga continua (*refill rate*) y headers `Retry-After` (HTTP 429).
+- [ ] **Estrategias de Control de Admisión**: Identificación y aislamiento de cuotas por cliente (IP, API Key, Token JWT) vs límites globales del sistema.
+- [ ] **Timeouts Estrictos y Circuit Breakers**: Prevención de agotamiento de hilos (thread starvation) y errores 524 de Edge CDN mediante límites estrictos con fallback inmediato a modelos locales.
+- [ ] **Graceful Shutdown POSIX**: Manejo de señales `SIGINT`/`SIGTERM` en Tokio para drenar conexiones en vuelo y preservar la integridad de buffers y streams en reinicios.
+
+### ⚙️ 3. Arquitectura Interna del LLM Serving (vLLM en Rust)
+- [ ] **Paged KV-Cache**: Por qué los Transformers fragmentan la memoria y cómo la gestión por bloques lógicos/físicos (16 tokens) emula la memoria virtual de un SO para lograr utilización > 90%.
+- [ ] **Continuous Batching vs Static Batching**: Cómo el bucle de scheduling dinámico permite que peticiones entren y salgan paso a paso sin esperar a la secuencia más larga.
+- [ ] **Zero-Copy Memory Mapping (`mmap`)**: Funcionamiento de `memmap2` y `VarBuilder` para mapear pesos Safetensors de cientos de megabytes en < 300 ms sin sobrecargar el heap.
+
+### ☸️ 4. Infraestructura Cloud, CI/CD y Kubernetes
+- [ ] **Pipeline de Integración Continua**: El trío de validación estricta en GitHub Actions: formato (`cargo fmt`), linteo de performance (`cargo clippy`) y auditoría de seguridad (`cargo audit`).
+- [ ] **Contenedores de Ultra-Bajo Peso (`cargo-chef`)**: Estrategia de 4 etapas (`planner`, `cacher`, `builder`, `runtime`) para compilar dependencias en caché y binarios < 40 MB.
+- [ ] **Topología Cloud-Native en Kubernetes**: Conceptos clave de orquestación: `Pod`, `Deployment`, `Service` (ClusterIP vs LoadBalancer), Health Probes (`/health`) y Autoescalado Horizontal elástico (`HPA`).
+
+---
+
 ## 📅 Resumen del Plan Completo
 
 | Fase | Enfoque | Entregable Principal | Estado |
@@ -445,6 +472,7 @@ Dominar las tecnologías punteras que diferencian a un ingeniero de sistemas de 
 | **4 — IA y Machine Learning** | Linfa, ONNX (`ort`), Tokenizers, Candle, KV-Cache | Servidor LLM con Token Streaming en Vivo | ✅ Completado |
 | **5 — Proyectos Production-Ready** | RAG Híbrido, vLLM Gateway, Multi-Agente, Visión/Audio Edge | Suite de 4 proyectos empresariales completos (21 tests) | ✅ Completado |
 | **6 — Deployment y Operaciones** | Docker chef, Observabilidad, CI/CD, Kubernetes HPA, Cloud SSL | **Infraestructura Cloud, K8s y Publicación SSL** | ✅ 100% Completado |
+| **🧠 — Repaso Conceptual** | Observabilidad ELK, Token Bucket, Paged KV-Cache, K8s & CI/CD | **Consolidación Teórico-Práctica** | 📖 En Proceso |
 | **7 — Fronteras Avanzadas** | GPU (CUDA/wgpu), Cuantización GGUF, PyO3 Python FFI, Wasm & MCP | **Deep AI Engineering en Rust** | 🎯 Próximo Objetivo |
 
 ---
