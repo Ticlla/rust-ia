@@ -389,7 +389,7 @@ Llevar los proyectos desarrollados en la Fase 5 al mundo real, implementando inf
 - [x] Resiliencia con Token Bucket Rate Limiting (HTTP 429) y Graceful Shutdown
 - [x] Pipeline de CI/CD automatizado en GitHub Actions (`.github/workflows/ci.yml`)
 - [x] Orquestación cloud-native en Kubernetes con HPA elástico y Probes de salud
-- [ ] Reporte formal de pruebas de carga con `k6` demostrando estabilidad P99
+- [x] Reporte formal de pruebas de carga con `k6` demostrando estabilidad P99 (16.76 ms y 0% errores)
 - [ ] Producto de prueba publicado en la nube pública y accesible vía Internet con SSL
 
 ---
