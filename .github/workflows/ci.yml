@@ -93,7 +93,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
       - name: Run Cargo Audit
-        uses: rustsec/audit-check@v1.4.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        run: cargo audit --file fase-5-proyecto-final/Cargo.lock
