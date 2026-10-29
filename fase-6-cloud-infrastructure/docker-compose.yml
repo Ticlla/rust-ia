@@ -50,6 +50,10 @@ services:
       - RAG_SERVICE_URL=http://rag-engine:3000
       - NVIDIA_API_KEY=${NVIDIA_API_KEY:-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}
       - NVIDIA_MODEL=nvidia/nemotron-3.5-bolt-e4b
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - MODEL_DIR=/models/smollm2-135m
+    volumes:
+      - ../models:/models:ro
     networks:
       - ai-mesh-network
     depends_on:
@@ -66,7 +70,7 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 512M
+          memory: 1024M
 
   # ----------------------------------------------------------------------------
   # Servicio 3: Prometheus (Recolección y Agregación de Métricas /metrics)

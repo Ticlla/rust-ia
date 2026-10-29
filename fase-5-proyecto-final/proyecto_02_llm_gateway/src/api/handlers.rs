@@ -15,15 +15,28 @@ use axum::{
     response::{Html, IntoResponse, Response},
     routing::{get, post},
 };
+use candle_core::{DType, Device, Tensor};
+use candle_transformers::models::llama::{Cache, Config as LlamaConfig, Llama};
+use chrono::Utc;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use tokenizers::Tokenizer;
 use tokio::sync::mpsc;
 use uuid::Uuid;
+
+pub struct RealLlamaEngine {
+    pub model: Arc<Llama>,
+    pub tokenizer: Tokenizer,
+    pub config: LlamaConfig,
+    pub dev: Device,
+    pub model_id: String,
+}
 
 pub struct AppState {
     pub config: GatewayConfig,
     pub scheduler: Arc<ContinuousBatchScheduler>,
+    pub real_engine: Option<Arc<RealLlamaEngine>>,
     pub requests_total: AtomicU64,
     pub rag_retrievals_total: AtomicU64,
     pub rate_limited_total: AtomicU64,
@@ -32,9 +45,18 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(config: GatewayConfig, scheduler: Arc<ContinuousBatchScheduler>) -> Self {
+        Self::with_engine(config, scheduler, None)
+    }
+
+    pub fn with_engine(
+        config: GatewayConfig,
+        scheduler: Arc<ContinuousBatchScheduler>,
+        real_engine: Option<Arc<RealLlamaEngine>>,
+    ) -> Self {
         Self {
             config,
             scheduler,
+            real_engine,
             requests_total: AtomicU64::new(0),
             rag_retrievals_total: AtomicU64::new(0),
             rate_limited_total: AtomicU64::new(0),
@@ -54,6 +76,42 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .with_state(state)
 }
 
+pub fn ship_log(
+    service: &'static str,
+    level: &'static str,
+    event: &'static str,
+    action: &'static str,
+    status_code: u16,
+    latency_ms: f64,
+    client_ip: &str,
+    detail: &str,
+) {
+    let es_url = std::env::var("ELASTICSEARCH_URL")
+        .unwrap_or_else(|_| "http://elasticsearch:9200".to_string());
+    let target = format!("{}/ai-stack-logs/_doc", es_url.trim_end_matches('/'));
+
+    let payload = serde_json::json!({
+        "@timestamp": Utc::now().to_rfc3339(),
+        "service": service,
+        "level": level,
+        "event": event,
+        "action": action,
+        "status_code": status_code,
+        "latency_ms": latency_ms,
+        "client_ip": client_ip,
+        "detail": detail,
+        "env": "production"
+    });
+
+    tokio::spawn(async move {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(800))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+        let _ = client.post(&target).json(&payload).send().await;
+    });
+}
+
 async fn chat_ui_handler() -> Html<&'static str> {
     Html(include_str!("chat_ui.html"))
 }
@@ -63,9 +121,15 @@ async fn health_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
     let waiting = state.scheduler.waiting_queue.lock().await;
     let running = state.scheduler.running_sequences.lock().await;
 
+    let (engine_type, model_id) = match &state.real_engine {
+        Some(e) => ("candle_llama_real_weights", e.model_id.as_str()),
+        None => ("continuous_batching_mock", state.config.model_id.as_str()),
+    };
+
     Json(serde_json::json!({
         "status": "healthy",
-        "model": state.config.model_id,
+        "engine": engine_type,
+        "model": model_id,
         "waiting_requests": waiting.len(),
         "running_requests": running.len(),
         "memory_utilization": cache.allocator.memory_utilization(),
@@ -138,10 +202,16 @@ async fn models_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
         .unwrap()
         .as_secs();
 
+    let model_id = state
+        .real_engine
+        .as_ref()
+        .map(|e| e.model_id.clone())
+        .unwrap_or_else(|| state.config.model_id.clone());
+
     Json(ModelListResponse {
         object: "list".to_string(),
         data: vec![ModelCard {
-            id: state.config.model_id.clone(),
+            id: model_id,
             object: "model".to_string(),
             created: now,
             owned_by: "rust-ia-systems".to_string(),
@@ -149,16 +219,72 @@ async fn models_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse
     })
 }
 
+fn sample_token_local(logits: &Tensor, temperature: f64) -> candle_core::Result<u32> {
+    if temperature <= 0.001 {
+        let vals = logits.to_vec1::<f32>()?;
+        let mut max_idx = 0;
+        let mut max_val = f32::NEG_INFINITY;
+        for (i, &v) in vals.iter().enumerate() {
+            if v > max_val {
+                max_val = v;
+                max_idx = i;
+            }
+        }
+        return Ok(max_idx as u32);
+    }
+
+    let scaled = (logits / temperature)?;
+    let probs = candle_nn::ops::softmax(&scaled, 0)?;
+    let vals = probs.to_vec1::<f32>()?;
+
+    let mut max_idx = 0;
+    let mut max_val = f32::NEG_INFINITY;
+    for (i, &v) in vals.iter().enumerate() {
+        if v > max_val {
+            max_val = v;
+            max_idx = i;
+        }
+    }
+    Ok(max_idx as u32)
+}
+
+fn format_chatml_prompt(messages: &[ChatMessage]) -> String {
+    let mut prompt = String::new();
+    for msg in messages {
+        prompt.push_str(&format!(
+            "<|im_start|>{}\n{}<|im_end|>\n",
+            msg.role, msg.content
+        ));
+    }
+    prompt.push_str("<|im_start|>assistant\n");
+    prompt
+}
+
 async fn chat_completions_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<Response, (StatusCode, String)> {
+    let start_time = Instant::now();
     state.requests_total.fetch_add(1, Ordering::Relaxed);
+    let client_ip = "127.0.0.1";
 
-    // Escudo de Resiliencia: Control de admisión con Rate-Limiting (Token Bucket)
+    // 1. Escudo de Resiliencia: Control de admisión con Rate-Limiting (Token Bucket)
     let client_id = "default_client";
     if let Err(retry_after) = state.rate_limiter.check_admission(client_id) {
         state.rate_limited_total.fetch_add(1, Ordering::Relaxed);
+        let latency_ms = start_time.elapsed().as_secs_f64() * 1000.0;
+        
+        ship_log(
+            "ai-llm-gateway",
+            "WARN",
+            "rate_limit_exceeded",
+            "rate_limiter_evaluation",
+            429,
+            latency_ms,
+            client_ip,
+            &format!("Token Bucket agotado. Reintente en {:.1}s", retry_after),
+        );
+
         let err_json = serde_json::json!({
             "error": {
                 "message": format!("Rate limit excedido (Token Bucket). Reintente en {:.1} segundos.", retry_after),
@@ -179,18 +305,21 @@ async fn chat_completions_handler(
 
     let mut messages = payload.messages.clone();
 
-    // 0. Pipeline RAG Automático: Si RAG_SERVICE_URL está presente, recuperar contexto por la red interna
+    // 2. Pipeline RAG Automático: Si RAG_SERVICE_URL está presente, recuperar contexto por la red interna
     if let Ok(rag_url) = std::env::var("RAG_SERVICE_URL") {
         if !rag_url.trim().is_empty() {
             if let Some(user_msg) = payload.messages.iter().rev().find(|m| m.role == "user") {
-                let client = reqwest::Client::new();
+                let rag_client = reqwest::Client::builder()
+                    .timeout(std::time::Duration::from_millis(1500))
+                    .build()
+                    .unwrap_or_else(|_| reqwest::Client::new());
                 let search_body = serde_json::json!({
                     "query": user_msg.content,
                     "top_k": 2
                 });
                 let search_url = format!("{}/api/v1/search", rag_url.trim_end_matches('/'));
 
-                if let Ok(rag_resp) = client.post(&search_url).json(&search_body).send().await {
+                if let Ok(rag_resp) = rag_client.post(&search_url).json(&search_body).send().await {
                     if rag_resp.status().is_success() {
                         if let Ok(rag_json) = rag_resp.json::<serde_json::Value>().await {
                             if let Some(hits) = rag_json["hits"].as_array() {
@@ -200,8 +329,7 @@ async fn chat_completions_handler(
                                         "INFORMACIÓN RECUPERADA DE LA BASE DE CONOCIMIENTO (RAG EN MEMORIA):\n",
                                     );
                                     for (idx, hit) in hits.iter().enumerate() {
-                                        let title =
-                                            hit["doc_title"].as_str().unwrap_or("Documento");
+                                        let title = hit["doc_title"].as_str().unwrap_or("Documento");
                                         let text = hit["text"].as_str().unwrap_or("");
                                         context_text.push_str(&format!(
                                             "[Fuente {}: {}]\n{}\n\n",
@@ -210,7 +338,7 @@ async fn chat_completions_handler(
                                             text
                                         ));
                                     }
-                                    context_text.push_str("INSTRUCCIÓN: Responde a la pregunta del usuario utilizando como base los hechos verificados del contexto recuperado arriba.");
+                                    context_text.push_str("INSTRUCCIÓN: Responde de forma clara y directa en español utilizando los hechos verificados de arriba.");
 
                                     messages.insert(
                                         0,
@@ -228,18 +356,18 @@ async fn chat_completions_handler(
         }
     }
 
-    // 1. Si existe NVIDIA_API_KEY configurada, reenviar la inferencia a Nemotron con el contexto aumentado
+    // 3. Upstream NVIDIA API con Timeout Explícito de 3.5 segundos
     if let Ok(api_key) = std::env::var("NVIDIA_API_KEY") {
         if !api_key.trim().is_empty() {
             let model = std::env::var("NVIDIA_MODEL")
                 .unwrap_or_else(|_| "nvidia/nemotron-3.5-bolt-e4b".to_string());
 
-            let client = reqwest::Client::new();
-            let max_tokens = if payload.max_tokens == 0 {
-                256
-            } else {
-                payload.max_tokens
-            };
+            let nvidia_client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_millis(3500))
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new());
+
+            let max_tokens = if payload.max_tokens == 0 { 256 } else { payload.max_tokens };
             let body = serde_json::json!({
                 "model": model,
                 "messages": messages,
@@ -247,7 +375,8 @@ async fn chat_completions_handler(
                 "max_tokens": max_tokens,
             });
 
-            let res = client
+            let nvidia_start = Instant::now();
+            let res = nvidia_client
                 .post("https://integrate.api.nvidia.com/v1/chat/completions")
                 .header("Authorization", format!("Bearer {}", api_key.trim()))
                 .header("Content-Type", "application/json")
@@ -257,23 +386,166 @@ async fn chat_completions_handler(
 
             match res {
                 Ok(resp) => {
-                    if resp.status().is_success() {
+                    let upstream_status = resp.status();
+                    if upstream_status.is_success() {
                         if let Ok(json_body) = resp.json::<serde_json::Value>().await {
+                            let total_latency = start_time.elapsed().as_secs_f64() * 1000.0;
+                            ship_log(
+                                "ai-llm-gateway",
+                                "INFO",
+                                "chat_completion_success",
+                                "upstream_nvidia_nemotron",
+                                200,
+                                total_latency,
+                                client_ip,
+                                "Inferencia generada exitosamente con NVIDIA Nemotron",
+                            );
                             return Ok(Json(json_body).into_response());
                         }
                     } else {
                         let err_text = resp.text().await.unwrap_or_default();
-                        eprintln!("Error de upstream Nemotron: {}", err_text);
+                        let upstream_latency = nvidia_start.elapsed().as_secs_f64() * 1000.0;
+                        ship_log(
+                            "ai-llm-gateway",
+                            "ERROR",
+                            "upstream_nvidia_error",
+                            "fallback_to_local",
+                            upstream_status.as_u16(),
+                            upstream_latency,
+                            client_ip,
+                            &format!("Upstream error {}: {}", upstream_status, err_text),
+                        );
                     }
                 }
                 Err(e) => {
-                    eprintln!("Fallo de red conectando con upstream Nemotron: {}", e);
+                    let upstream_latency = nvidia_start.elapsed().as_secs_f64() * 1000.0;
+                    ship_log(
+                        "ai-llm-gateway",
+                        "ERROR",
+                        "upstream_nvidia_timeout",
+                        "fallback_to_local",
+                        504,
+                        upstream_latency,
+                        client_ip,
+                        &format!("Upstream timeout ({:?}). Procediendo a inferencia local.", e),
+                    );
                 }
             }
         }
     }
 
-    // 2. Fallback: Construir prompt a partir de messages para el motor local continuo
+    // 4. Inferencia Local: Caso A — Servir modelo real SmolLM2-135M con Candle en CPU
+    if let Some(engine) = &state.real_engine {
+        let prompt_text = format_chatml_prompt(&messages);
+        
+        let encoded = engine.tokenizer.encode(prompt_text.as_str(), true).map_err(|e| {
+            (StatusCode::BAD_REQUEST, format!("Error de tokenización: {e}"))
+        })?;
+        let prompt_ids = encoded.get_ids().to_vec();
+        let prompt_len = prompt_ids.len();
+
+        let model = Arc::clone(&engine.model);
+        let config = engine.config.clone();
+        let dev = engine.dev.clone();
+        let tokenizer = engine.tokenizer.clone();
+        let max_tokens = if payload.max_tokens == 0 { 64 } else { payload.max_tokens.min(96) };
+        let temperature = payload.temperature.max(0.01) as f64;
+
+        let generated_text = tokio::task::spawn_blocking(move || -> Result<String, String> {
+            let mut cache = Cache::new(true, DType::F32, &config, &dev).map_err(|e| e.to_string())?;
+
+            let input_tensor = Tensor::new(&prompt_ids[..], &dev)
+                .map_err(|e| e.to_string())?
+                .unsqueeze(0)
+                .map_err(|e| e.to_string())?;
+
+            let logits = model
+                .forward(&input_tensor, 0, &mut cache)
+                .map_err(|e| e.to_string())?;
+
+            let last_logits = logits
+                .squeeze(0)
+                .map_err(|e| e.to_string())?
+                .squeeze(0)
+                .map_err(|e| e.to_string())?;
+
+            let mut next_token = sample_token_local(&last_logits, temperature).map_err(|e| e.to_string())?;
+
+            let mut generated_ids = Vec::new();
+            let eos_id = 2u32;
+            let im_end_id = 49153u32;
+
+            for step in 0..max_tokens {
+                if next_token == eos_id || next_token == im_end_id {
+                    break;
+                }
+                generated_ids.push(next_token);
+
+                let input_token = Tensor::new(&[next_token], &dev)
+                    .map_err(|e| e.to_string())?
+                    .unsqueeze(0)
+                    .map_err(|e| e.to_string())?;
+
+                let logits = model
+                    .forward(&input_token, prompt_len + step, &mut cache)
+                    .map_err(|e| e.to_string())?;
+
+                let token_logits = logits
+                    .squeeze(0)
+                    .map_err(|e| e.to_string())?
+                    .squeeze(0)
+                    .map_err(|e| e.to_string())?;
+
+                next_token = sample_token_local(&token_logits, temperature).map_err(|e| e.to_string())?;
+            }
+
+            tokenizer
+                .decode(&generated_ids, false)
+                .map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en join: {e}")))?
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en inferencia: {e}")))?;
+
+        let total_latency = start_time.elapsed().as_secs_f64() * 1000.0;
+        let completion_tokens = max_tokens as usize;
+
+        ship_log(
+            "ai-llm-gateway",
+            "INFO",
+            "local_smollm2_success",
+            "self_hosted_serving",
+            200,
+            total_latency,
+            client_ip,
+            &format!("Inferencia local SmolLM2 completada en {:.1}ms", total_latency),
+        );
+
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let response = ChatCompletionResponse {
+            id: format!("chatcmpl-{}", Uuid::new_v4()),
+            object: "chat.completion".to_string(),
+            created: now,
+            model: engine.model_id.clone(),
+            choices: vec![ChatChoice {
+                index: 0,
+                message: ChatMessage {
+                    role: "assistant".to_string(),
+                    content: generated_text.trim().to_string(),
+                },
+                finish_reason: Some("stop".to_string()),
+            }],
+            usage: UsageInfo {
+                prompt_tokens: prompt_len,
+                completion_tokens,
+                total_tokens: prompt_len + completion_tokens,
+            },
+        };
+
+        return Ok(Json(response).into_response());
+    }
+
+    // 4. Inferencia Local: Caso B — Fallback a ContinuousBatchScheduler mock
     let mut prompt = String::new();
     for msg in &messages {
         prompt.push_str(&format!("{}: {}\n", msg.role, msg.content));
@@ -308,13 +580,13 @@ async fn chat_completions_handler(
     // Enviar secuencia al scheduler de continuous batching
     state.scheduler.add_request(sequence).await;
 
-    // 2. Si el cliente solicitó Streaming vía SSE:
+    // Si el cliente solicitó Streaming vía SSE:
     if payload.stream {
         let sse = create_sse_response(seq_id, state.config.model_id.clone(), rx);
         return Ok(sse.into_response());
     }
 
-    // 3. Si solicitó respuesta síncrona completa:
+    // Si solicitó respuesta síncrona completa:
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
@@ -336,6 +608,18 @@ async fn chat_completions_handler(
             break;
         }
     }
+
+    let total_latency = start_time.elapsed().as_secs_f64() * 1000.0;
+    ship_log(
+        "ai-llm-gateway",
+        "INFO",
+        "local_mock_batch_success",
+        "continuous_batch_scheduler",
+        200,
+        total_latency,
+        client_ip,
+        &format!("Inferencia mock completada en {:.1}ms ({} tokens)", total_latency, completion_tokens),
+    );
 
     let response = ChatCompletionResponse {
         id: seq_id,
