@@ -27,7 +27,8 @@ impl InferenceBatcher {
                 if max_batch_size > 1 {
                     let deadline = tokio::time::Instant::now() + batch_timeout;
                     while batch.len() < max_batch_size {
-                        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+                        let remaining =
+                            deadline.saturating_duration_since(tokio::time::Instant::now());
                         if remaining.is_zero() {
                             break;
                         }
@@ -35,7 +36,9 @@ impl InferenceBatcher {
                         match tokio::time::timeout(remaining, receiver.recv()).await {
                             Ok(Some(next_task)) => {
                                 // Agrupar solo si coincide el tipo de modelo y forma unitaria
-                                if next_task.kind == batch[0].kind && next_task.shape == batch[0].shape {
+                                if next_task.kind == batch[0].kind
+                                    && next_task.shape == batch[0].shape
+                                {
                                     batch.push(next_task);
                                 } else {
                                     // Tarea con diferente forma/modelo: ejecutar de inmediato en tarea paralela
@@ -91,9 +94,11 @@ impl InferenceBatcher {
                             }
                             Err(e) => {
                                 for sender in senders {
-                                    let _ = sender.send(Err(crate::engine::EngineError::InferenceFailed(
-                                        format!("Fallo en micro-batching: {e}"),
-                                    )));
+                                    let _ = sender.send(Err(
+                                        crate::engine::EngineError::InferenceFailed(format!(
+                                            "Fallo en micro-batching: {e}"
+                                        )),
+                                    ));
                                 }
                             }
                         }

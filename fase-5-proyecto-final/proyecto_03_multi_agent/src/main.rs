@@ -1,6 +1,6 @@
 //! Servidor de Inferencia y Orquestación Multi-Agente en Axum.
 
-use proyecto_03_multi_agent::api::{build_router, AppState};
+use proyecto_03_multi_agent::api::{AppState, build_router};
 use proyecto_03_multi_agent::create_default_system;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -36,8 +36,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🚀 Orquestador Multi-Agente escuchando en http://{}", addr);
     info!("📡 Endpoints disponibles:");
     info!("  - Health Check:   GET  http://{}/health", addr);
-    info!("  - Run Workflow:   POST http://{}/v1/orchestrator/run", addr);
-    info!("  - Event Streaming: GET http://{}/v1/orchestrator/events (SSE)", addr);
+    info!(
+        "  - Run Workflow:   POST http://{}/v1/orchestrator/run",
+        addr
+    );
+    info!(
+        "  - Event Streaming: GET http://{}/v1/orchestrator/events (SSE)",
+        addr
+    );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, router).await?;

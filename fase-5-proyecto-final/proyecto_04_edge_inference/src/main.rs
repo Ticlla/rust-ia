@@ -5,7 +5,7 @@ use std::path::Path;
 use std::time::Duration;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use proyecto_04_edge_inference::api::{create_router, AppState};
+use proyecto_04_edge_inference::api::{AppState, create_router};
 use proyecto_04_edge_inference::config::EdgeServiceConfig;
 use proyecto_04_edge_inference::engine::SessionPool;
 use proyecto_04_edge_inference::queue::{BackpressureQueue, InferenceBatcher};
@@ -17,7 +17,9 @@ const DEFAULT_AUDIO_MODEL: &[u8] = include_bytes!("../models/audio_classifier.on
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
@@ -29,9 +31,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Configuración activa:");
     println!("    • Host: {}", config.host);
     println!("    • Puerto: {}", config.port);
-    println!("    • Pool de sesiones ONNX: {} workers por modalidad", config.pool_size);
-    println!("    • Capacidad de cola (Backpressure): {} slots", config.queue_capacity);
-    println!("    • Dynamic Batching: Máx {} muestras / {} ms ventana", config.max_batch_size, config.batch_timeout_ms);
+    println!(
+        "    • Pool de sesiones ONNX: {} workers por modalidad",
+        config.pool_size
+    );
+    println!(
+        "    • Capacidad de cola (Backpressure): {} slots",
+        config.queue_capacity
+    );
+    println!(
+        "    • Dynamic Batching: Máx {} muestras / {} ms ventana",
+        config.max_batch_size, config.batch_timeout_ms
+    );
     println!("--------------------------------------------------------------------------------");
 
     // 1. Cargar modelos ONNX desde disco o memoria embebida
@@ -57,7 +68,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4. Iniciar Worker de Dynamic Batching en segundo plano
     let batch_timeout = Duration::from_millis(config.batch_timeout_ms);
-    let _worker_handle = InferenceBatcher::spawn(receiver, pool.clone(), config.max_batch_size, batch_timeout);
+    let _worker_handle =
+        InferenceBatcher::spawn(receiver, pool.clone(), config.max_batch_size, batch_timeout);
     println!("✓ Worker de Dynamic Batching en ejecución.");
 
     // 5. Configurar Estado Global y Router Axum

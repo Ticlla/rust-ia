@@ -39,10 +39,7 @@ impl AutonomousDaemon {
     }
 
     /// Ejecuta el bucle del demonio 24/7 con selección asíncrona
-    pub async fn run(
-        &self,
-        mut shutdown_rx: Option<oneshot::Receiver<()>>,
-    ) -> Vec<IncidentReport> {
+    pub async fn run(&self, mut shutdown_rx: Option<oneshot::Receiver<()>>) -> Vec<IncidentReport> {
         let mut ticker = interval(self.config.poll_interval);
         let mut incidents = Vec::new();
         let mut incident_counter = 0;

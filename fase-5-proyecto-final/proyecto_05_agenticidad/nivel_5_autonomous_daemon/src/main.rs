@@ -1,6 +1,6 @@
+use nivel_5_autonomous_daemon::{AutoHealer, AutonomousDaemon, DaemonConfig};
 use std::path::Path;
 use std::time::Duration;
-use nivel_5_autonomous_daemon::{AutonomousDaemon, DaemonConfig, AutoHealer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -9,7 +9,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("================================================================================");
 
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let target_dir = manifest_dir.parent().unwrap().join("sandbox/broken_service");
+    let target_dir = manifest_dir
+        .parent()
+        .unwrap()
+        .join("sandbox/broken_service");
 
     println!("  • Microservicio Monitorizado: {:?}", target_dir);
     println!("  • Modelo de Operación:        Always-On Background Daemon (tokio::select!)");
@@ -44,8 +47,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  • Incidente ID:               {}", inc.incident_id);
         println!("  • Error Detectado:            {}", inc.detected_error);
         println!("  • Acción Tomada:              {}", inc.patch_summary);
-        println!("  • Tiempo Medio de Recuperación: {} ms (MTTR)", inc.duration_ms);
-        println!("  • Verificación 'cargo test':  {}", if inc.cargo_test_verified { "✅ ÉXITO (100% Pasado)" } else { "❌ FALLO" });
+        println!(
+            "  • Tiempo Medio de Recuperación: {} ms (MTTR)",
+            inc.duration_ms
+        );
+        println!(
+            "  • Verificación 'cargo test':  {}",
+            if inc.cargo_test_verified {
+                "✅ ÉXITO (100% Pasado)"
+            } else {
+                "❌ FALLO"
+            }
+        );
         println!("  • Estado Final del Incidente: {}", inc.status);
     }
 

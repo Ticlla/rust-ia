@@ -1,16 +1,18 @@
 //! Pruebas de Integración para el High-Throughput LLM Serving Gateway
 
-use axum::body::{to_bytes, Body};
+use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode};
 use candle_core::Device;
-use proyecto_02_llm_gateway::api::handlers::{build_router, AppState};
-use proyecto_02_llm_gateway::api::openai_types::{ChatCompletionRequest, ChatCompletionResponse, ChatMessage, ModelListResponse};
+use proyecto_02_llm_gateway::api::handlers::{AppState, build_router};
+use proyecto_02_llm_gateway::api::openai_types::{
+    ChatCompletionRequest, ChatCompletionResponse, ChatMessage, ModelListResponse,
+};
 use proyecto_02_llm_gateway::config::GatewayConfig;
 use proyecto_02_llm_gateway::model::{GatewayTokenizer, GatewayTransformer};
 use proyecto_02_llm_gateway::paged_cache::{BlockAllocator, PagedKvCacheManager};
 use proyecto_02_llm_gateway::scheduler::{ContinuousBatchScheduler, Sequence};
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tower::ServiceExt;
 
 #[test]
@@ -124,17 +126,27 @@ async fn test_continuous_batching_scheduler_admission_and_step() {
     while let Ok(chunk) = rx1.try_recv() {
         chunks1.push(chunk);
     }
-    assert!(!chunks1.is_empty(), "Secuencia 1 debe haber generado tokens");
+    assert!(
+        !chunks1.is_empty(),
+        "Secuencia 1 debe haber generado tokens"
+    );
 
     let mut chunks2 = Vec::new();
     while let Ok(chunk) = rx2.try_recv() {
         chunks2.push(chunk);
     }
-    assert!(!chunks2.is_empty(), "Secuencia 2 debe haber generado tokens");
+    assert!(
+        !chunks2.is_empty(),
+        "Secuencia 2 debe haber generado tokens"
+    );
 
     // Verificar que tras completar la inferencia, la memoria se liberó
     let cache = paged_cache.lock().await;
-    assert_eq!(cache.allocator.num_used_blocks(), 0, "Todos los bloques deben haberse liberado");
+    assert_eq!(
+        cache.allocator.num_used_blocks(),
+        0,
+        "Todos los bloques deben haberse liberado"
+    );
 }
 
 #[tokio::test]
@@ -197,7 +209,12 @@ async fn test_openai_api_endpoints() {
     // 1. Test GET /v1/models
     let res = app
         .clone()
-        .oneshot(Request::builder().uri("/v1/models").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/v1/models")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 
@@ -301,7 +318,12 @@ async fn test_openai_api_endpoints() {
     // 5. Test GET /metrics (Prometheus)
     let res = app
         .clone()
-        .oneshot(Request::builder().uri("/metrics").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/metrics")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 

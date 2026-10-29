@@ -1,13 +1,13 @@
 //! Suite de pruebas de integración para el microservicio Edge Vision & Audio.
 
-use std::time::Duration;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use base64::Engine;
 use serde_json::Value;
+use std::time::Duration;
 use tower::ServiceExt;
 
-use proyecto_04_edge_inference::api::{create_router, AppState};
+use proyecto_04_edge_inference::api::{AppState, create_router};
 use proyecto_04_edge_inference::audio::{
     AudioPostprocessor, AudioResampler, MelSpectrogramExtractor, SpectrogramConfig, WavDecoder,
 };
@@ -57,7 +57,10 @@ fn test_vision_pipeline_letterbox_and_nchw() {
     // Verificar dimensiones exactas NCHW: 3 canales * 224 * 224
     assert_eq!(tensor.len(), 3 * 224 * 224);
     assert_eq!(letterbox.new_w, 224);
-    assert!(letterbox.pad_y > 0, "Debe existir padding vertical para mantener aspecto 4:3");
+    assert!(
+        letterbox.pad_y > 0,
+        "Debe existir padding vertical para mantener aspecto 4:3"
+    );
 
     // Verificar Softmax y Top-K
     let dummy_logits = vec![2.5f32, 1.0, -0.5, 3.2, 0.1];
@@ -124,12 +127,18 @@ async fn test_session_pool_concurrent_execution() {
             if i % 2 == 0 {
                 let shape = vec![1, 3, 224, 224];
                 let dummy_data = vec![0.2f32; 3 * 224 * 224];
-                let (logits, _us) = pool_clone.run(ModelKind::Vision, &shape, dummy_data).await.unwrap();
+                let (logits, _us) = pool_clone
+                    .run(ModelKind::Vision, &shape, dummy_data)
+                    .await
+                    .unwrap();
                 assert_eq!(logits.len(), 5);
             } else {
                 let shape = vec![1, 1, 80, 100];
                 let dummy_data = vec![0.1f32; 8000];
-                let (logits, _us) = pool_clone.run(ModelKind::Audio, &shape, dummy_data).await.unwrap();
+                let (logits, _us) = pool_clone
+                    .run(ModelKind::Audio, &shape, dummy_data)
+                    .await
+                    .unwrap();
                 assert_eq!(logits.len(), 5);
             }
         });
@@ -141,7 +150,10 @@ async fn test_session_pool_concurrent_execution() {
     }
 
     let stats = pool.get_stats();
-    assert_eq!(stats.vision_total_inferences + stats.audio_total_inferences, 8);
+    assert_eq!(
+        stats.vision_total_inferences + stats.audio_total_inferences,
+        8
+    );
 }
 
 // -----------------------------------------------------------------------------
@@ -160,14 +172,30 @@ async fn test_backpressure_queue_rejection_and_metrics() {
     let s1 = dummy_shape.clone();
     let d1 = dummy_data.clone();
     tokio::spawn(async move {
-        let _ = q1.submit("task-1".into(), ModelKind::Vision, s1, d1, Duration::from_millis(50)).await;
+        let _ = q1
+            .submit(
+                "task-1".into(),
+                ModelKind::Vision,
+                s1,
+                d1,
+                Duration::from_millis(50),
+            )
+            .await;
     });
 
     let q2 = queue.clone();
     let s2 = dummy_shape.clone();
     let d2 = dummy_data.clone();
     tokio::spawn(async move {
-        let _ = q2.submit("task-2".into(), ModelKind::Vision, s2, d2, Duration::from_millis(50)).await;
+        let _ = q2
+            .submit(
+                "task-2".into(),
+                ModelKind::Vision,
+                s2,
+                d2,
+                Duration::from_millis(50),
+            )
+            .await;
     });
 
     // Pequeño descanso para garantizar encolado
@@ -175,7 +203,13 @@ async fn test_backpressure_queue_rejection_and_metrics() {
 
     // La 3ra tarea DEBE ser rechazada de inmediato por contrapresión (cola llena)
     let res = queue
-        .submit("task-3".into(), ModelKind::Vision, dummy_shape, dummy_data, Duration::from_millis(50))
+        .submit(
+            "task-3".into(),
+            ModelKind::Vision,
+            dummy_shape,
+            dummy_data,
+            Duration::from_millis(50),
+        )
         .await;
 
     match res {
@@ -183,7 +217,10 @@ async fn test_backpressure_queue_rejection_and_metrics() {
             assert_eq!(depth, 2);
             assert_eq!(capacity, 2);
         }
-        other => panic!("Se esperaba QueueError::Saturated, pero se obtuvo: {:?}", other),
+        other => panic!(
+            "Se esperaba QueueError::Saturated, pero se obtuvo: {:?}",
+            other
+        ),
     }
 
     let stats = queue.stats();
@@ -217,15 +254,24 @@ async fn test_dynamic_batching_worker() {
         let handle = tokio::spawn(async move {
             let shape = vec![1, 3, 224, 224];
             let data = vec![0.1f32 * (i as f32 + 1.0); 3 * 224 * 224];
-            q.submit(format!("batch-{i}"), ModelKind::Vision, shape, data, Duration::from_secs(3))
-                .await
+            q.submit(
+                format!("batch-{i}"),
+                ModelKind::Vision,
+                shape,
+                data,
+                Duration::from_secs(3),
+            )
+            .await
         });
         handles.push(handle);
     }
 
     for h in handles {
         let res = h.await.unwrap();
-        assert!(res.is_ok(), "Cada solicitud del batch debe recibir su resultado individual");
+        assert!(
+            res.is_ok(),
+            "Cada solicitud del batch debe recibir su resultado individual"
+        );
         let (logits, _us) = res.unwrap();
         assert_eq!(logits.len(), 5);
     }
@@ -247,7 +293,9 @@ async fn test_axum_api_endpoints() {
 
     let res = app.clone().oneshot(req).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let health_json: Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(health_json["status"], "healthy");
 
@@ -269,7 +317,9 @@ async fn test_axum_api_endpoints() {
 
     let res = app.clone().oneshot(req).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let vision_json: Value = serde_json::from_slice(&bytes).unwrap();
     assert!(vision_json["success"].as_bool().unwrap());
     assert_eq!(vision_json["predictions"].as_array().unwrap().len(), 3);
@@ -293,7 +343,9 @@ async fn test_axum_api_endpoints() {
 
     let res = app.clone().oneshot(req).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let audio_json: Value = serde_json::from_slice(&bytes).unwrap();
     assert!(audio_json["success"].as_bool().unwrap());
     assert_eq!(audio_json["predictions"].as_array().unwrap().len(), 2);
@@ -307,7 +359,9 @@ async fn test_axum_api_endpoints() {
 
     let res = app.oneshot(req).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
-    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let metrics_json: Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(metrics_json["total_requests"], 2);
     assert_eq!(metrics_json["successful_requests"], 2);

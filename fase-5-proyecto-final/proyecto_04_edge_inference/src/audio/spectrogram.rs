@@ -17,7 +17,8 @@ impl MelSpectrogramExtractor {
         // 1. Precomputar Ventana de Hann
         let mut hann_window = Vec::with_capacity(n_fft);
         for n in 0..n_fft {
-            let val = 0.5 * (1.0 - (2.0 * std::f32::consts::PI * n as f32 / (n_fft - 1) as f32).cos());
+            let val =
+                0.5 * (1.0 - (2.0 * std::f32::consts::PI * n as f32 / (n_fft - 1) as f32).cos());
             hann_window.push(val);
         }
 

@@ -1,13 +1,13 @@
 //! Ensamblado de rutas Axum con middlewares de CORS y rastreo.
 
-use axum::routing::{get, post};
 use axum::Router;
+use axum::routing::{get, post};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 
 use crate::api::handlers::{
-    classify_vision_handler, dashboard_handler, health_handler, infer_audio_handler,
-    metrics_handler, AppState,
+    AppState, classify_vision_handler, dashboard_handler, health_handler, infer_audio_handler,
+    metrics_handler,
 };
 
 pub fn create_router(state: AppState) -> Router {

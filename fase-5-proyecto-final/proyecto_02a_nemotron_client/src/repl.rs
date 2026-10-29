@@ -1,10 +1,10 @@
 //! Consola interactiva (REPL) con streaming continuo y telemetría de tokens.
 
-use std::io::{self, Write};
 use crate::client::NemotronClient;
 use crate::config::BackendMode;
 use crate::metrics::StreamTelemetry;
 use crate::types::ChatMessage;
+use std::io::{self, Write};
 
 pub struct NemotronRepl {
     client: NemotronClient,
@@ -90,18 +90,26 @@ impl NemotronRepl {
     }
 
     fn print_welcome(&self) {
-        println!("================================================================================");
+        println!(
+            "================================================================================"
+        );
         println!("  🧠 NVIDIA NEMOTRON INTERACTIVE CLIENT (RUST AI ENGINE)");
-        println!("================================================================================");
+        println!(
+            "================================================================================"
+        );
         println!("  • Modelo activo:  {}", self.client.config.model);
         println!("  • Backend:        {:?}", self.client.config.backend_mode);
         println!("  • Endpoint:       {}", self.client.config.base_url);
         println!("  • Comandos útiles: /help, /clear, /model <nombre>, /system <prompt>, /exit");
         if self.client.config.backend_mode == BackendMode::MockSimulator {
-            println!("  ℹ️  MODO SIMULADOR ACTIVO: Para usar NVIDIA NIM Cloud real, define la variable:");
+            println!(
+                "  ℹ️  MODO SIMULADOR ACTIVO: Para usar NVIDIA NIM Cloud real, define la variable:"
+            );
             println!("     export NVIDIA_API_KEY=\"nvapi-...\"");
         }
-        println!("================================================================================");
+        println!(
+            "================================================================================"
+        );
     }
 
     fn print_telemetry_badge(&self, telemetry: &StreamTelemetry) {
@@ -147,7 +155,10 @@ impl NemotronRepl {
                     }
                     println!("✓ Personalidad / System Prompt actualizado.");
                 } else {
-                    println!("ℹ️ System Prompt actual:\n{}", self.client.config.system_prompt);
+                    println!(
+                        "ℹ️ System Prompt actual:\n{}",
+                        self.client.config.system_prompt
+                    );
                 }
             }
             "/config" => {
@@ -162,13 +173,18 @@ impl NemotronRepl {
             "/help" => {
                 println!("📖 Comandos disponibles:");
                 println!("   /clear            - Borra la memoria y reinicia el contexto");
-                println!("   /model <nombre>   - Cambia el modelo (ej: nvidia/nemotron-4-340b-instruct)");
+                println!(
+                    "   /model <nombre>   - Cambia el modelo (ej: nvidia/nemotron-4-340b-instruct)"
+                );
                 println!("   /system <texto>   - Define las instrucciones de sistema del modelo");
                 println!("   /config           - Muestra los parámetros de conexión actuales");
                 println!("   /exit             - Cierra la consola interactiva");
             }
             _ => {
-                println!("❌ Comando desconocido '{}'. Escribe /help para ver la lista.", parts[0]);
+                println!(
+                    "❌ Comando desconocido '{}'. Escribe /help para ver la lista.",
+                    parts[0]
+                );
             }
         }
         false

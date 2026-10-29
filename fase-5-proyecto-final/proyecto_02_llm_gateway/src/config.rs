@@ -38,8 +38,8 @@ impl Default for GatewayConfig {
             n_heads: 4,
             n_layers: 2,
             vocab_size: 50,
-            block_size: 8,      // 8 tokens por bloque físico
-            total_blocks: 128,  // 128 bloques * 8 = 1024 tokens de capacidad en VRAM/RAM
+            block_size: 8,     // 8 tokens por bloque físico
+            total_blocks: 128, // 128 bloques * 8 = 1024 tokens de capacidad en VRAM/RAM
             max_batch_size: 16,
             eos_token_id: 2,
         }

@@ -2,11 +2,11 @@
 //! Se activa proactivamente ante incidentes sin intervención humana.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
-use serde_json::Value;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IncidentReport {
@@ -39,7 +39,8 @@ impl AutoHealer {
         let start = Instant::now();
 
         // 1. Extraer el error principal del compilador
-        let root_error = error_log.lines()
+        let root_error = error_log
+            .lines()
             .find(|l| l.contains("error["))
             .unwrap_or("Error de compilación no catalogado")
             .to_string();
@@ -131,9 +132,14 @@ mod tests {
         IncidentReport {
             incident_id: incident_id.to_string(),
             detected_error: root_error,
-            patch_summary: "calculate_tax parcheado con format!(\"{:.2}\", amount * 0.18)".to_string(),
+            patch_summary: "calculate_tax parcheado con format!(\"{:.2}\", amount * 0.18)"
+                .to_string(),
             duration_ms,
-            status: if tests_pass { "RESOLVED".to_string() } else { "FAILED".to_string() },
+            status: if tests_pass {
+                "RESOLVED".to_string()
+            } else {
+                "FAILED".to_string()
+            },
             cargo_test_verified: tests_pass,
         }
     }

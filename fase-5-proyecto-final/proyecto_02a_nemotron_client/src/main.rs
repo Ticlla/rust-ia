@@ -1,5 +1,5 @@
-use std::env;
 use proyecto_02a_nemotron_client::{NemotronClient, NemotronConfig, NemotronRepl};
+use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -39,7 +39,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[weights_path], DType::F32, &dev)? };
     let model = Llama::load(vb, &config)?;
     let tokenizer = Tokenizer::from_file(&tokenizer_path).map_err(|e| e.to_string())?;
-    println!("¡Modelo cargado en {:.2} ms!", start_load.elapsed().as_secs_f64() * 1000.0);
+    println!(
+        "¡Modelo cargado en {:.2} ms!",
+        start_load.elapsed().as_secs_f64() * 1000.0
+    );
 
     println!("\nEl modelo está listo para responder tus preguntas.");
     println!("Escribe lo que quieras (o 'salir' / 'exit' para terminar).\n");
@@ -60,14 +63,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
 
-        if user_text.eq_ignore_ascii_case("salir") || user_text.eq_ignore_ascii_case("exit") || user_text.eq_ignore_ascii_case("quit") {
+        if user_text.eq_ignore_ascii_case("salir")
+            || user_text.eq_ignore_ascii_case("exit")
+            || user_text.eq_ignore_ascii_case("quit")
+        {
             println!("\n¡Hasta pronto!");
             break;
         }
 
         // Formato ChatML
-        let prompt = format!("<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n", user_text);
-        let encoded = tokenizer.encode(prompt.as_str(), true).map_err(|e| e.to_string())?;
+        let prompt = format!(
+            "<|im_start|>user\n{}<|im_end|>\n<|im_start|>assistant\n",
+            user_text
+        );
+        let encoded = tokenizer
+            .encode(prompt.as_str(), true)
+            .map_err(|e| e.to_string())?;
         let prompt_ids = encoded.get_ids();
         let prompt_len = prompt_ids.len();
 

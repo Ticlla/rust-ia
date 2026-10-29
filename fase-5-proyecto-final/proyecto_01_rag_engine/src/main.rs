@@ -1,7 +1,7 @@
 //! Entrypoint del Servidor Enterprise Hybrid RAG Engine
 
 use candle_core::Device;
-use proyecto_01_rag_engine::api::handlers::{build_router, AppState};
+use proyecto_01_rag_engine::api::handlers::{AppState, build_router};
 use proyecto_01_rag_engine::config::RagConfig;
 use proyecto_01_rag_engine::engine::EnterpriseRagEngine;
 use proyecto_01_rag_engine::ingestion::Document;

@@ -142,10 +142,7 @@ impl Tool for RagSearchTool {
             .and_then(|v| v.as_str())
             .ok_or_else(|| ToolError::InvalidParameters("Field 'query' is required".into()))?;
 
-        let top_k = arguments
-            .get("top_k")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(3) as usize;
+        let top_k = arguments.get("top_k").and_then(|v| v.as_u64()).unwrap_or(3) as usize;
 
         // Base de conocimiento técnica indexada en memoria
         let documents: [(&str, &str, &str, f64); 4] = [
@@ -284,7 +281,8 @@ impl Tool for RustCodeValidatorTool {
             ));
         }
         if has_unsafe {
-            recommendations.push("Contains `unsafe` blocks: Verify soundness and memory bounds".into());
+            recommendations
+                .push("Contains `unsafe` blocks: Verify soundness and memory bounds".into());
         }
         if !code.contains("///") && !code.contains("//!") {
             recommendations.push("Missing doc comments for public API definitions".into());

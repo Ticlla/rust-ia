@@ -63,10 +63,12 @@ impl ZeroShotAgent {
         }
 
         // Simulación offline si no hay conexión o API key
-        Ok("Para solucionar el error de tipos E0308 en sandbox/broken_service/src/main.rs, \
+        Ok(
+            "Para solucionar el error de tipos E0308 en sandbox/broken_service/src/main.rs, \
            debes cambiar la función para que formatee el cálculo a un String: \
            utiliza `format!(\"{:.2}\", amount * 0.18)` en lugar de retornar directamente el float."
-            .to_string())
+                .to_string(),
+        )
     }
 
     /// Evalúa si el código en el sandbox fue realmente reparado

@@ -104,12 +104,15 @@ impl ContinuousBatchScheduler {
                         seq.block_table.push(new_block);
                     } else {
                         // OOM Preventivo: Si no hay bloques, finalizar por aborto
-                        let _ = seq.sender.send(SequenceOutputChunk {
-                            seq_id: seq.id.clone(),
-                            token_id: self.eos_token_id,
-                            text_delta: String::new(),
-                            finish_reason: Some(FinishReason::Abort),
-                        }).await;
+                        let _ = seq
+                            .sender
+                            .send(SequenceOutputChunk {
+                                seq_id: seq.id.clone(),
+                                token_id: self.eos_token_id,
+                                text_delta: String::new(),
+                                finish_reason: Some(FinishReason::Abort),
+                            })
+                            .await;
                         completed_indices.push(idx);
                         continue;
                     }
@@ -119,12 +122,9 @@ impl ContinuousBatchScheduler {
                 let mut full_history = seq.prompt_tokens.clone();
                 full_history.extend_from_slice(&seq.generated_tokens);
 
-                let logits = self.model.step_sequence(
-                    &full_history,
-                    false,
-                    &seq.block_table,
-                    &mut cache,
-                )?;
+                let logits =
+                    self.model
+                        .step_sequence(&full_history, false, &seq.block_table, &mut cache)?;
                 GatewayTransformer::sample_token(&logits, seq.temperature)?
             };
 
@@ -146,12 +146,15 @@ impl ContinuousBatchScheduler {
             let is_finished = finish_reason.is_some();
 
             // Emitir chunk al canal asíncrono SSE del cliente HTTP
-            let _ = seq.sender.send(SequenceOutputChunk {
-                seq_id: seq.id.clone(),
-                token_id: next_token_result,
-                text_delta: format!(" {}", token_text),
-                finish_reason,
-            }).await;
+            let _ = seq
+                .sender
+                .send(SequenceOutputChunk {
+                    seq_id: seq.id.clone(),
+                    token_id: next_token_result,
+                    text_delta: format!(" {}", token_text),
+                    finish_reason,
+                })
+                .await;
 
             if is_finished {
                 completed_indices.push(idx);

@@ -22,13 +22,23 @@ pub struct FunctionCall {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReadFileArgs {
-    #[serde(default = "default_path", alias = "path", alias = "file_path", alias = "file")]
+    #[serde(
+        default = "default_path",
+        alias = "path",
+        alias = "file_path",
+        alias = "file"
+    )]
     pub relative_path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WriteFileArgs {
-    #[serde(default = "default_path", alias = "path", alias = "file_path", alias = "file")]
+    #[serde(
+        default = "default_path",
+        alias = "path",
+        alias = "file_path",
+        alias = "file"
+    )]
     pub relative_path: String,
     #[serde(alias = "code", alias = "text", alias = "data")]
     pub content: String,
@@ -113,13 +123,19 @@ impl ToolExecutor {
             let s = p.trim_start_matches('/');
             let s = s.strip_prefix("sandbox/broken_service/").unwrap_or(s);
             let s = s.strip_prefix("broken_service/").unwrap_or(s);
-            if s.is_empty() { "src/main.rs".to_string() } else { s.to_string() }
+            if s.is_empty() {
+                "src/main.rs".to_string()
+            } else {
+                s.to_string()
+            }
         };
 
         match tool_name {
             "read_file" => {
                 let args: Result<ReadFileArgs, _> = serde_json::from_str(args_json);
-                let raw_path = args.map(|a| a.relative_path).unwrap_or_else(|_| "src/main.rs".to_string());
+                let raw_path = args
+                    .map(|a| a.relative_path)
+                    .unwrap_or_else(|_| "src/main.rs".to_string());
                 let rel_path = normalize_path(&raw_path);
                 let target = sandbox_dir.join(&rel_path);
 
@@ -138,7 +154,11 @@ impl ToolExecutor {
                             let _ = fs::create_dir_all(parent);
                         }
                         match fs::write(&target, &a.content) {
-                            Ok(_) => format!("Archivo '{}' modificado exitosamente ({} bytes escritos).", rel_path, a.content.len()),
+                            Ok(_) => format!(
+                                "Archivo '{}' modificado exitosamente ({} bytes escritos).",
+                                rel_path,
+                                a.content.len()
+                            ),
                             Err(e) => format!("Error escribiendo en '{}': {e}", rel_path),
                         }
                     }
@@ -146,9 +166,17 @@ impl ToolExecutor {
                 }
             }
             "run_cargo_check" => {
-                match Command::new("cargo").arg("check").current_dir(sandbox_dir).output() {
+                match Command::new("cargo")
+                    .arg("check")
+                    .current_dir(sandbox_dir)
+                    .output()
+                {
                     Ok(out) => {
-                        let status = if out.status.success() { "EXITO: El código compila sin errores." } else { "FALLO: Errores de compilación:" };
+                        let status = if out.status.success() {
+                            "EXITO: El código compila sin errores."
+                        } else {
+                            "FALLO: Errores de compilación:"
+                        };
                         let stderr = String::from_utf8_lossy(&out.stderr);
                         format!("{status}\n{stderr}")
                     }
@@ -156,7 +184,11 @@ impl ToolExecutor {
                 }
             }
             "run_cargo_test" => {
-                match Command::new("cargo").arg("test").current_dir(sandbox_dir).output() {
+                match Command::new("cargo")
+                    .arg("test")
+                    .current_dir(sandbox_dir)
+                    .output()
+                {
                     Ok(out) => {
                         let stdout = String::from_utf8_lossy(&out.stdout);
                         let stderr = String::from_utf8_lossy(&out.stderr);

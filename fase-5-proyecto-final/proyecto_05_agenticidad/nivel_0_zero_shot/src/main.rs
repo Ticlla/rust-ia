@@ -1,5 +1,5 @@
-use std::path::Path;
 use nivel_0_zero_shot::ZeroShotAgent;
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -8,9 +8,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("================================================================================");
 
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let target_dir = manifest_dir.parent().unwrap().join("sandbox/broken_service");
+    let target_dir = manifest_dir
+        .parent()
+        .unwrap()
+        .join("sandbox/broken_service");
 
-    println!("  • Desafío: Reparar error de compilación en {:?}", target_dir);
+    println!(
+        "  • Desafío: Reparar error de compilación en {:?}",
+        target_dir
+    );
     println!("  • Herramientas (Tools) disponibles:      0 (Ninguna)");
     println!("  • Permisos de escritura / ejecución:     0 (Modo solo lectura)");
     println!("  • Bucle de retroalimentación (ReAct):    Nulo (1 solo intento)");
@@ -18,7 +24,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 1. Estado inicial del sandbox
     let (init_ok, _) = ZeroShotAgent::verify_sandbox(&target_dir);
-    println!("  [Estado Inicial] ¿El microservicio compila?: {}", if init_ok { "SÍ" } else { "NO (Roto con E0308)" });
+    println!(
+        "  [Estado Inicial] ¿El microservicio compila?: {}",
+        if init_ok {
+            "SÍ"
+        } else {
+            "NO (Roto con E0308)"
+        }
+    );
 
     // 2. Ejecutar prompt al modelo
     let prompt = "El microservicio en sandbox/broken_service no compila debido a un error de tipos. \
@@ -26,7 +39,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n  📤 Enviando meta al LLM (Nivel 0)...");
     let agent = ZeroShotAgent::default();
-    let response = agent.query(prompt).await.unwrap_or_else(|e| format!("Error: {e}"));
+    let response = agent
+        .query(prompt)
+        .await
+        .unwrap_or_else(|e| format!("Error: {e}"));
 
     println!("\n  🤖 RESPUESTA TEXTUAL DEL LLM:");
     println!("  \"{}\"", response.trim());
@@ -40,7 +56,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  ✅ ¡Sorprendente! El servicio compila.");
     } else {
         println!("  ❌ EL SERVICIO SIGUE ROTO.");
-        let first_err_line = stderr.lines().find(|l| l.contains("error[")).unwrap_or("error[E0308]");
+        let first_err_line = stderr
+            .lines()
+            .find(|l| l.contains("error["))
+            .unwrap_or("error[E0308]");
         println!("     • Detalle: {}", first_err_line.trim());
     }
 

@@ -42,7 +42,9 @@ impl SseParser {
                     }
                     Ok(SseEvent::Empty)
                 }
-                Err(e) => Err(format!("Error deserializando chunk SSE: {e} | Contenido: {data}")),
+                Err(e) => Err(format!(
+                    "Error deserializando chunk SSE: {e} | Contenido: {data}"
+                )),
             }
         } else {
             Ok(SseEvent::Empty)

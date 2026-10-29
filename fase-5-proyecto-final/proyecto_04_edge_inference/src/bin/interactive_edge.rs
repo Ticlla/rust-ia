@@ -27,16 +27,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         println!();
-        println!("================================================================================");
+        println!(
+            "================================================================================"
+        );
         println!("  🔬 CONSOLA INTERACTIVA EDGE AI — VISIÓN & AUDIO");
-        println!("================================================================================");
+        println!(
+            "================================================================================"
+        );
         println!("  1. [Visión] Analizar imagen desde archivo personalizado (PNG/JPG)");
         println!("  2. [Visión] Probar muestra: 'defecto_inspeccion.png'");
         println!("  3. [Visión] Probar muestra: 'pieza_limpia.png'");
         println!("  4. [Audio]  Analizar audio desde archivo personalizado (.wav)");
         println!("  5. [Audio]  Probar muestra: 'alerta_parada.wav'");
         println!("  6. Salir");
-        println!("--------------------------------------------------------------------------------");
+        println!(
+            "--------------------------------------------------------------------------------"
+        );
         print!("  Selecciona una opción [1-6]: ");
         io::stdout().flush()?;
 
@@ -67,11 +73,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut path_str = String::new();
                 io::stdin().read_line(&mut path_str)?;
                 let path = path_str.trim();
-                run_audio_analysis(path, &spec_config, &extractor, &pool, &audio_postprocessor).await;
+                run_audio_analysis(path, &spec_config, &extractor, &pool, &audio_postprocessor)
+                    .await;
             }
             "5" => {
                 let path = "samples/alerta_parada.wav";
-                run_audio_analysis(path, &spec_config, &extractor, &pool, &audio_postprocessor).await;
+                run_audio_analysis(path, &spec_config, &extractor, &pool, &audio_postprocessor)
+                    .await;
             }
             "6" | "q" | "exit" => {
                 println!("  ¡Hasta pronto!");
@@ -105,7 +113,11 @@ async fn run_vision_analysis(
         }
     };
 
-    println!("\n  🖼️ Analizando imagen: '{}' ({} bytes)...", path, bytes.len());
+    println!(
+        "\n  🖼️ Analizando imagen: '{}' ({} bytes)...",
+        path,
+        bytes.len()
+    );
     let t0 = Instant::now();
     let (tensor, (orig_w, orig_h), _letterbox) = match preprocessor.process_bytes(&bytes) {
         Ok(res) => res,
@@ -116,7 +128,12 @@ async fn run_vision_analysis(
     };
     let t_pre = t0.elapsed();
 
-    let shape = vec![1, 3, preprocessor.target_h as usize, preprocessor.target_w as usize];
+    let shape = vec![
+        1,
+        3,
+        preprocessor.target_h as usize,
+        preprocessor.target_w as usize,
+    ];
     let t1 = Instant::now();
     let (logits, _us) = match pool.run(ModelKind::Vision, &shape, tensor).await {
         Ok(res) => res,
@@ -134,7 +151,10 @@ async fn run_vision_analysis(
     let t_total = t_pre + t_inf + t_post;
 
     println!("  ------------------------------------------------------------------");
-    println!("  📐 Dimensiones originales: {}x{} px -> Letterbox a 224x224", orig_w, orig_h);
+    println!(
+        "  📐 Dimensiones originales: {}x{} px -> Letterbox a 224x224",
+        orig_w, orig_h
+    );
     println!("  🎯 PREDICCIONES DEL MODELO (Top-3):");
     for (i, p) in preds.iter().enumerate() {
         let bar_len = (p.probability * 30.0).round() as usize;
@@ -149,10 +169,20 @@ async fn run_vision_analysis(
     }
     println!("  ------------------------------------------------------------------");
     println!("  ⏱️ DESGLOSE DE TIEMPOS:");
-    println!("     • Preproceso (Decode + Letterbox + NCHW): {:.2} ms", t_pre.as_secs_f64() * 1000.0);
-    println!("     • Inferencia ONNX SIMD:                 {:.2} ms", t_inf.as_secs_f64() * 1000.0);
-    println!("     • Postproceso (Softmax + Top-K):        {:.3} ms", t_post.as_secs_f64() * 1000.0);
-    println!("     🚀 LATENCIA TOTAL:                       {:.2} ms ({:.1} FPS)",
+    println!(
+        "     • Preproceso (Decode + Letterbox + NCHW): {:.2} ms",
+        t_pre.as_secs_f64() * 1000.0
+    );
+    println!(
+        "     • Inferencia ONNX SIMD:                 {:.2} ms",
+        t_inf.as_secs_f64() * 1000.0
+    );
+    println!(
+        "     • Postproceso (Softmax + Top-K):        {:.3} ms",
+        t_post.as_secs_f64() * 1000.0
+    );
+    println!(
+        "     🚀 LATENCIA TOTAL:                       {:.2} ms ({:.1} FPS)",
         t_total.as_secs_f64() * 1000.0,
         1.0 / t_total.as_secs_f64()
     );
@@ -178,7 +208,11 @@ async fn run_audio_analysis(
         }
     };
 
-    println!("\n  🎙️ Analizando archivo WAV: '{}' ({} bytes)...", path, bytes.len());
+    println!(
+        "\n  🎙️ Analizando archivo WAV: '{}' ({} bytes)...",
+        path,
+        bytes.len()
+    );
     let t0 = Instant::now();
     let (raw_samples, sample_rate) = match WavDecoder::decode_bytes(&bytes) {
         Ok(res) => res,
@@ -213,7 +247,10 @@ async fn run_audio_analysis(
 
     let dur = raw_samples.len() as f32 / sample_rate as f32;
     println!("  ------------------------------------------------------------------");
-    println!("  🔊 Tasa original: {} Hz | Duración: {:.2}s | Resampleado a {} Hz", sample_rate, dur, spec_config.sample_rate);
+    println!(
+        "  🔊 Tasa original: {} Hz | Duración: {:.2}s | Resampleado a {} Hz",
+        sample_rate, dur, spec_config.sample_rate
+    );
     println!("  🗣️ COMANDOS ACÚSTICOS DETECTADOS (Top-3):");
     for (i, p) in preds.iter().enumerate() {
         let bar_len = (p.probability * 30.0).round() as usize;
@@ -228,11 +265,24 @@ async fn run_audio_analysis(
     }
     println!("  ------------------------------------------------------------------");
     println!("  ⏱️ DESGLOSE DE TIEMPOS:");
-    println!("     • Decodificación + Resample a 16kHz:    {:.2} ms", t_dec.as_secs_f64() * 1000.0);
-    println!("     • Espectrograma Log-Mel (80 bins):       {:.2} ms", t_spec.as_secs_f64() * 1000.0);
-    println!("     • Inferencia ONNX SIMD:                 {:.2} ms", t_inf.as_secs_f64() * 1000.0);
-    println!("     • Postproceso (Softmax + Top-K):        {:.3} ms", t_post.as_secs_f64() * 1000.0);
-    println!("     🚀 LATENCIA TOTAL:                       {:.2} ms ({:.1}x tiempo real)",
+    println!(
+        "     • Decodificación + Resample a 16kHz:    {:.2} ms",
+        t_dec.as_secs_f64() * 1000.0
+    );
+    println!(
+        "     • Espectrograma Log-Mel (80 bins):       {:.2} ms",
+        t_spec.as_secs_f64() * 1000.0
+    );
+    println!(
+        "     • Inferencia ONNX SIMD:                 {:.2} ms",
+        t_inf.as_secs_f64() * 1000.0
+    );
+    println!(
+        "     • Postproceso (Softmax + Top-K):        {:.3} ms",
+        t_post.as_secs_f64() * 1000.0
+    );
+    println!(
+        "     🚀 LATENCIA TOTAL:                       {:.2} ms ({:.1}x tiempo real)",
         t_total.as_secs_f64() * 1000.0,
         dur as f64 / t_total.as_secs_f64()
     );

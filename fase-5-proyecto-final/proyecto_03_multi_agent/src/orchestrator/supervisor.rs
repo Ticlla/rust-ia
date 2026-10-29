@@ -100,7 +100,10 @@ impl SupervisorOrchestrator {
             2. **Abstracciones de Costo Cero (*Zero-Cost Abstractions*):** Los traits, iteradores y la concurrencia asíncrona de Tokio compilan a instrucciones máquina nativas con rendimiento comparable o superior a C++.\n\
             3. **Ecosistema Industrial de IA:** Herramientas como ONNX Runtime (`ort`), Hugging Face `Candle`, `Polars` y `Axum` permiten construir motores de inferencia y agentes ultraligeros (< 30 MB RAM) con tipado estricto.\n\n\
             ¿Deseas que diseñemos o analicemos algún patrón arquitectónico específico en Rust?".to_string()
-        } else if cleaned.contains("quien eres") || cleaned.contains("who are you") || cleaned.contains("que eres") {
+        } else if cleaned.contains("quien eres")
+            || cleaned.contains("who are you")
+            || cleaned.contains("que eres")
+        {
             "¡Hola! Soy el Supervisor del Sistema Autónomo Multi-Agente en Rust puro.\n\n\
             Coordino un equipo de agentes concurrentes basados en el Modelo de Actores de Tokio:\n\
             - 🔬 **Investigador (Researcher):** Explora especificaciones y bases documentales RAG.\n\
@@ -126,7 +129,9 @@ impl SupervisorOrchestrator {
         graph.add_task(TaskNode::new(
             "task_1_research",
             AgentRole::Researcher,
-            format!("Investigar especificaciones técnicas, SIMD y patrones de memoria para: '{goal}'"),
+            format!(
+                "Investigar especificaciones técnicas, SIMD y patrones de memoria para: '{goal}'"
+            ),
             vec![],
         ));
 
@@ -148,7 +153,11 @@ impl SupervisorOrchestrator {
     }
 
     /// Ejecuta el flujo de trabajo orquestado respetando la intención del usuario y dependencias del grafo.
-    pub async fn run_workflow(&self, workflow_id: &str, goal: &str) -> Result<WorkflowReport, String> {
+    pub async fn run_workflow(
+        &self,
+        workflow_id: &str,
+        goal: &str,
+    ) -> Result<WorkflowReport, String> {
         let start_time = Instant::now();
 
         self.event_bus.publish(AgentEvent::WorkflowStarted {
@@ -248,7 +257,10 @@ impl SupervisorOrchestrator {
                                 (
                                     parsed["approved"].as_bool().unwrap_or(true),
                                     parsed["score"].as_f64().unwrap_or(0.95) as f32,
-                                    parsed["feedback"].as_str().unwrap_or("Aprobado").to_string(),
+                                    parsed["feedback"]
+                                        .as_str()
+                                        .unwrap_or("Aprobado")
+                                        .to_string(),
                                 )
                             } else {
                                 (true, 0.90, "Revisión satisfactoria".to_string())
@@ -277,9 +289,18 @@ impl SupervisorOrchestrator {
 
         let total_duration_ms = start_time.elapsed().as_millis() as u64;
 
-        let research_summary = graph.tasks.get("task_1_research").and_then(|t| t.output.clone());
-        let generated_code = graph.tasks.get("task_2_code").and_then(|t| t.output.clone());
-        let review_feedback = graph.tasks.get("task_3_review").and_then(|t| t.output.clone());
+        let research_summary = graph
+            .tasks
+            .get("task_1_research")
+            .and_then(|t| t.output.clone());
+        let generated_code = graph
+            .tasks
+            .get("task_2_code")
+            .and_then(|t| t.output.clone());
+        let review_feedback = graph
+            .tasks
+            .get("task_3_review")
+            .and_then(|t| t.output.clone());
 
         let final_synthesis = format!(
             "### Orquestación Multi-Agente Completada\n\n\

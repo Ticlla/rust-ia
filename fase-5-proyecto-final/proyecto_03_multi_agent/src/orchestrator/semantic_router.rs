@@ -72,7 +72,13 @@ impl DenseSubwordEmbedder {
 
         for w in &words {
             // Detección de negación contextual (Spanish & English)
-            if *w == "no" || *w == "sin" || *w == "not" || *w == "never" || *w == "dont" || *w == "don't" {
+            if *w == "no"
+                || *w == "sin"
+                || *w == "not"
+                || *w == "never"
+                || *w == "dont"
+                || *w == "don't"
+            {
                 in_negation = true;
                 continue;
             }
@@ -241,15 +247,9 @@ impl SemanticRouter {
             "write rust code for this problem",
         ];
 
-        let conv_anchors = conv_texts
-            .iter()
-            .map(|&t| (t, embedder.embed(t)))
-            .collect();
+        let conv_anchors = conv_texts.iter().map(|&t| (t, embedder.embed(t))).collect();
 
-        let tech_anchors = tech_texts
-            .iter()
-            .map(|&t| (t, embedder.embed(t)))
-            .collect();
+        let tech_anchors = tech_texts.iter().map(|&t| (t, embedder.embed(t))).collect();
 
         Self {
             embedder,
@@ -315,21 +315,50 @@ impl SemanticRouter {
             || q_lower.contains("without code");
 
         let (intent, confidence, top_anchor) = if explicitly_denies_code {
-            (UserIntent::Conversational, 0.95, "negación explícita de código".to_string())
+            (
+                UserIntent::Conversational,
+                0.95,
+                "negación explícita de código".to_string(),
+            )
         } else if max_tech_sim > max_conv_sim + 0.04 {
-            (UserIntent::TechnicalTask, max_tech_sim, top_tech_anchor.to_string())
+            (
+                UserIntent::TechnicalTask,
+                max_tech_sim,
+                top_tech_anchor.to_string(),
+            )
         } else if max_conv_sim > max_tech_sim + 0.04 {
-            (UserIntent::Conversational, max_conv_sim, top_conv_anchor.to_string())
+            (
+                UserIntent::Conversational,
+                max_conv_sim,
+                top_conv_anchor.to_string(),
+            )
         } else {
             // Zona frontera: si contiene verbos de acción constructiva imperativa sin negación
-            let has_creation_imperative = ["crear", "crea ", "diseñar", "diseña ", "implementar", "implementa ", "make ", "build "]
-                .iter()
-                .any(|&verb| q_lower.contains(verb));
+            let has_creation_imperative = [
+                "crear",
+                "crea ",
+                "diseñar",
+                "diseña ",
+                "implementar",
+                "implementa ",
+                "make ",
+                "build ",
+            ]
+            .iter()
+            .any(|&verb| q_lower.contains(verb));
 
             if has_creation_imperative {
-                (UserIntent::TechnicalTask, max_tech_sim.max(0.60), top_tech_anchor.to_string())
+                (
+                    UserIntent::TechnicalTask,
+                    max_tech_sim.max(0.60),
+                    top_tech_anchor.to_string(),
+                )
             } else {
-                (UserIntent::Conversational, max_conv_sim.max(0.60), top_conv_anchor.to_string())
+                (
+                    UserIntent::Conversational,
+                    max_conv_sim.max(0.60),
+                    top_conv_anchor.to_string(),
+                )
             }
         };
 

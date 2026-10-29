@@ -30,7 +30,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Generar imagen PNG sintética de 640x480 (resolución típica de cámara Edge)
     let png_bytes = VisionPreprocessor::generate_synthetic_png(640, 480);
-    println!("    • Imagen de prueba generada: 640x480 PNG ({} bytes)", png_bytes.len());
+    println!(
+        "    • Imagen de prueba generada: 640x480 PNG ({} bytes)",
+        png_bytes.len()
+    );
 
     let mut pre_times = Vec::new();
     let mut inf_times = Vec::new();
@@ -41,7 +44,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (tensor, _dims, _letterbox) = preprocessor.process_bytes(&png_bytes).unwrap();
         let t_pre = t0.elapsed();
 
-        let shape = vec![1, 3, preprocessor.target_h as usize, preprocessor.target_w as usize];
+        let shape = vec![
+            1,
+            3,
+            preprocessor.target_h as usize,
+            preprocessor.target_w as usize,
+        ];
         let t1 = Instant::now();
         let (logits, _us) = pool.run(ModelKind::Vision, &shape, tensor).await.unwrap();
         let t_inf = t1.elapsed();
@@ -61,10 +69,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let avg_post: f64 = post_times.iter().sum::<f64>() / post_times.len() as f64;
     let total_vision = avg_pre + avg_inf + avg_post;
 
-    println!("    ✓ Preprocesamiento (Decode + Letterbox + NCHW): {:.2} ms", avg_pre);
-    println!("    ✓ Inferencia ONNX Runtime (CPU SIMD):          {:.2} ms", avg_inf);
-    println!("    ✓ Postprocesamiento (Softmax + Top-K):          {:.2} ms", avg_post);
-    println!("    🚀 LATENCIA TOTAL DE VISIÓN:                    {:.2} ms ({:.1} FPS)", total_vision, 1000.0 / total_vision);
+    println!(
+        "    ✓ Preprocesamiento (Decode + Letterbox + NCHW): {:.2} ms",
+        avg_pre
+    );
+    println!(
+        "    ✓ Inferencia ONNX Runtime (CPU SIMD):          {:.2} ms",
+        avg_inf
+    );
+    println!(
+        "    ✓ Postprocesamiento (Softmax + Top-K):          {:.2} ms",
+        avg_post
+    );
+    println!(
+        "    🚀 LATENCIA TOTAL DE VISIÓN:                    {:.2} ms ({:.1} FPS)",
+        total_vision,
+        1000.0 / total_vision
+    );
 
     // -------------------------------------------------------------------------
     // 2. BENCHMARK DE AUDIO Y ESPECTROGRAMAS MEL
@@ -76,7 +97,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Generar audio senoidal de 1.0 segundo a 44,100 Hz
     let wav_bytes = WavDecoder::synthesize_test_wav(44100, 1.0, 440.0);
-    println!("    • Audio WAV de prueba: 1.0s @ 44.1kHz ({} bytes)", wav_bytes.len());
+    println!(
+        "    • Audio WAV de prueba: 1.0s @ 44.1kHz ({} bytes)",
+        wav_bytes.len()
+    );
 
     let mut audio_dec_times = Vec::new();
     let mut audio_spec_times = Vec::new();
@@ -85,7 +109,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for _ in 0..10 {
         let t0 = Instant::now();
         let (raw_samples, sample_rate) = WavDecoder::decode_bytes(&wav_bytes).unwrap();
-        let resampled = AudioResampler::resample(&raw_samples, sample_rate, spec_config.sample_rate);
+        let resampled =
+            AudioResampler::resample(&raw_samples, sample_rate, spec_config.sample_rate);
         let t_dec = t0.elapsed();
 
         let t1 = Instant::now();
@@ -94,7 +119,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let shape = vec![1, 1, spec_config.n_mels, spec_config.target_frames];
         let t2 = Instant::now();
-        let (logits, _us) = pool.run(ModelKind::Audio, &shape, mel_tensor).await.unwrap();
+        let (logits, _us) = pool
+            .run(ModelKind::Audio, &shape, mel_tensor)
+            .await
+            .unwrap();
         let t_inf = t2.elapsed();
 
         let probs = AudioPostprocessor::softmax(&logits);
@@ -110,10 +138,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let avg_inf_a: f64 = audio_inf_times.iter().sum::<f64>() / audio_inf_times.len() as f64;
     let total_audio = avg_dec + avg_spec + avg_inf_a;
 
-    println!("    ✓ Decodificación WAV y Remuestreo a 16kHz:       {:.2} ms", avg_dec);
-    println!("    ✓ Extracción de Espectrograma Log-Mel (80 bins): {:.2} ms", avg_spec);
-    println!("    ✓ Inferencia ONNX Runtime (CPU SIMD):          {:.2} ms", avg_inf_a);
-    println!("    🚀 LATENCIA TOTAL DE AUDIO:                     {:.2} ms (Procesamiento {:.1}x tiempo real)", total_audio, 1000.0 / total_audio);
+    println!(
+        "    ✓ Decodificación WAV y Remuestreo a 16kHz:       {:.2} ms",
+        avg_dec
+    );
+    println!(
+        "    ✓ Extracción de Espectrograma Log-Mel (80 bins): {:.2} ms",
+        avg_spec
+    );
+    println!(
+        "    ✓ Inferencia ONNX Runtime (CPU SIMD):          {:.2} ms",
+        avg_inf_a
+    );
+    println!(
+        "    🚀 LATENCIA TOTAL DE AUDIO:                     {:.2} ms (Procesamiento {:.1}x tiempo real)",
+        total_audio,
+        1000.0 / total_audio
+    );
 
     println!("\n================================================================================");
     println!("  ✅ TODOS LOS BENCHMARKS FINALIZADOS CON RENDIMIENTO INDUSTRIAL");

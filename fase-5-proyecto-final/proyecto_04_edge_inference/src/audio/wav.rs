@@ -9,7 +9,8 @@ impl WavDecoder {
     /// Decodifica un buffer de bytes WAV a muestras de audio mono en formato float32 [-1.0, 1.0]
     pub fn decode_bytes(bytes: &[u8]) -> Result<(Vec<f32>, u32), String> {
         let cursor = Cursor::new(bytes);
-        let reader = WavReader::new(cursor).map_err(|e| format!("Fallo leyendo WAV header: {e}"))?;
+        let reader =
+            WavReader::new(cursor).map_err(|e| format!("Fallo leyendo WAV header: {e}"))?;
 
         let spec = reader.spec();
         let channels = spec.channels as usize;
@@ -42,7 +43,7 @@ impl WavDecoder {
             (fmt, bits) => {
                 return Err(format!(
                     "Formato de muestra WAV no soportado: formato={fmt:?}, bits={bits}"
-                ))
+                ));
             }
         };
 

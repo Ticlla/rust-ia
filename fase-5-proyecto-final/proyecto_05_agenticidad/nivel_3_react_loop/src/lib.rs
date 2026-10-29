@@ -3,10 +3,10 @@
 
 pub mod tools;
 
+use crate::tools::{ToolCall, ToolExecutor};
+use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
-use serde_json::Value;
-use crate::tools::{ToolCall, ToolExecutor};
 
 pub struct ReActAgent {
     pub model: String,
@@ -92,13 +92,19 @@ impl ReActAgent {
                             let content = choice["content"].as_str().map(|s| s.to_string());
 
                             if let Some(tool_calls_val) = choice.get("tool_calls") {
-                                if let Ok(calls) = serde_json::from_value::<Vec<ToolCall>>(tool_calls_val.clone()) {
+                                if let Ok(calls) =
+                                    serde_json::from_value::<Vec<ToolCall>>(tool_calls_val.clone())
+                                {
                                     if let Some(first_call) = calls.first() {
                                         let tool_name = &first_call.function.name;
                                         let args = &first_call.function.arguments;
 
                                         // Ejecutar la herramienta en el sandbox
-                                        let observation = ToolExecutor::execute_tool(sandbox_dir, tool_name, args);
+                                        let observation = ToolExecutor::execute_tool(
+                                            sandbox_dir,
+                                            tool_name,
+                                            args,
+                                        );
 
                                         traces.push(StepTrace {
                                             step,
@@ -117,7 +123,9 @@ impl ReActAgent {
                                             "content": observation
                                         }));
 
-                                        if tool_name == "run_cargo_test" && observation.contains("EXITO") {
+                                        if tool_name == "run_cargo_test"
+                                            && observation.contains("EXITO")
+                                        {
                                             success = true;
                                             break;
                                         }
@@ -136,9 +144,18 @@ impl ReActAgent {
                                     observation: "Sin acción física".to_string(),
                                 });
 
-                                if txt.to_lowercase().contains("completada") || txt.to_lowercase().contains("exitoso") {
+                                if txt.to_lowercase().contains("completada")
+                                    || txt.to_lowercase().contains("exitoso")
+                                {
                                     // Verificar objetivamente si compila
-                                    let (check_ok, _) = crate::tools::ToolExecutor::execute_tool(sandbox_dir, "run_cargo_check", "{}").starts_with("EXITO").then_some((true, ())).unwrap_or((false, ()));
+                                    let (check_ok, _) = crate::tools::ToolExecutor::execute_tool(
+                                        sandbox_dir,
+                                        "run_cargo_check",
+                                        "{}",
+                                    )
+                                    .starts_with("EXITO")
+                                    .then_some((true, ()))
+                                    .unwrap_or((false, ()));
                                     if check_ok {
                                         success = true;
                                     }
@@ -184,7 +201,8 @@ mod tests {
                         let args = serde_json::json!({
                             "relative_path": "src/main.rs",
                             "content": fixed_code
-                        }).to_string();
+                        })
+                        .to_string();
 
                         let obs = ToolExecutor::execute_tool(sandbox_dir, "write_file", &args);
                         traces.push(StepTrace {

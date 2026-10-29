@@ -21,7 +21,12 @@ pub struct FunctionCall {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WriteFileArgs {
-    #[serde(default = "default_path", alias = "path", alias = "file_path", alias = "file")]
+    #[serde(
+        default = "default_path",
+        alias = "path",
+        alias = "file_path",
+        alias = "file"
+    )]
     pub relative_path: String,
     #[serde(alias = "code", alias = "text", alias = "data")]
     pub content: String,
@@ -74,7 +79,11 @@ impl ToolExecutor {
     }
 
     /// Ejecuta una llamada de herramienta específica sobre el sandbox
-    pub fn execute_tool(sandbox_dir: &Path, tool_name: &str, args_json: &str) -> Result<String, String> {
+    pub fn execute_tool(
+        sandbox_dir: &Path,
+        tool_name: &str,
+        args_json: &str,
+    ) -> Result<String, String> {
         match tool_name {
             "write_file" => {
                 let args: WriteFileArgs = serde_json::from_str(args_json)
@@ -88,7 +97,11 @@ impl ToolExecutor {
                 fs::write(&target_path, &args.content)
                     .map_err(|e| format!("Error escribiendo en {}: {e}", target_path.display()))?;
 
-                Ok(format!("Archivo '{}' escrito con éxito ({} bytes)", args.relative_path, args.content.len()))
+                Ok(format!(
+                    "Archivo '{}' escrito con éxito ({} bytes)",
+                    args.relative_path,
+                    args.content.len()
+                ))
             }
             "run_cargo_check" => {
                 let output = Command::new("cargo")
@@ -99,7 +112,11 @@ impl ToolExecutor {
 
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                let status = if output.status.success() { "COMPILACIÓN EXITOSA" } else { "FALLO DE COMPILACIÓN" };
+                let status = if output.status.success() {
+                    "COMPILACIÓN EXITOSA"
+                } else {
+                    "FALLO DE COMPILACIÓN"
+                };
 
                 Ok(format!("{status}\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"))
             }

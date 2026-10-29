@@ -1,6 +1,6 @@
-use std::path::Path;
-use nivel_3_react_loop::tools::ToolExecutor;
 use nivel_3_react_loop::ReActAgent;
+use nivel_3_react_loop::tools::ToolExecutor;
+use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -9,18 +9,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("================================================================================");
 
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let target_dir = manifest_dir.parent().unwrap().join("sandbox/broken_service");
+    let target_dir = manifest_dir
+        .parent()
+        .unwrap()
+        .join("sandbox/broken_service");
 
     println!("  • Desafío: Reparar y verificar {:?}", target_dir);
-    println!("  • Herramientas (Tools) activas:          read_file, write_file, cargo_check, cargo_test");
+    println!(
+        "  • Herramientas (Tools) activas:          read_file, write_file, cargo_check, cargo_test"
+    );
     println!("  • Bucle de retroalimentación (ReAct):    ACTIVO (Pensar -> Actuar -> Observar)");
-    println!("  • Capacidad de autocorrección:           ACTIVA (Itera ante errores hasta tener éxito)");
+    println!(
+        "  • Capacidad de autocorrección:           ACTIVA (Itera ante errores hasta tener éxito)"
+    );
     println!("--------------------------------------------------------------------------------");
 
     // 1. Restablecer el microservicio a su estado roto original
     ToolExecutor::reset_broken_service(&target_dir)?;
     let initial_status = ToolExecutor::execute_tool(&target_dir, "run_cargo_check", "{}");
-    println!("  [Estado Inicial] ¿El microservicio compila?: {}", if initial_status.contains("EXITO") { "SÍ" } else { "NO (Roto con E0308)" });
+    println!(
+        "  [Estado Inicial] ¿El microservicio compila?: {}",
+        if initial_status.contains("EXITO") {
+            "SÍ"
+        } else {
+            "NO (Roto con E0308)"
+        }
+    );
 
     let goal = "El microservicio en sandbox/broken_service/src/main.rs no compila. \
                 Usa las herramientas para diagnosticar el error, escribe el código corregido \
@@ -32,15 +46,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 2. Mostrar la traza de pasos autónomos
     for trace in &traces {
-        println!("\n  ┌─ [PASO {}] ────────────────────────────────────────────────────────", trace.step);
+        println!(
+            "\n  ┌─ [PASO {}] ────────────────────────────────────────────────────────",
+            trace.step
+        );
         if let Some(thought) = &trace.thought {
             println!("  │ 🧠 PENSAMIENTO: {}", thought.trim());
         }
         println!("  │ 🛠️  ACCIÓN:      {}", trace.action);
-        
+
         let obs_preview = if trace.observation.lines().count() > 4 {
             let first_lines: Vec<&str> = trace.observation.lines().take(3).collect();
-            format!("{}\n  │                 ... (salida truncada)", first_lines.join("\n  │                 "))
+            format!(
+                "{}\n  │                 ... (salida truncada)",
+                first_lines.join("\n  │                 ")
+            )
         } else {
             trace.observation.replace('\n', "\n  │                 ")
         };
@@ -55,7 +75,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if is_success && final_test.contains("EXITO") {
         println!("  ✅ ¡MISIÓN CUMPLIDA AL 100%!");
-        println!("  ✅ El agente diagnosticó el fallo, modificó el archivo, comprobó la compilación");
+        println!(
+            "  ✅ El agente diagnosticó el fallo, modificó el archivo, comprobó la compilación"
+        );
         println!("     y verificó que las pruebas unitarias pasaran con éxito.");
     } else {
         println!("  ❌ No se alcanzó el objetivo tras agotar los pasos.");

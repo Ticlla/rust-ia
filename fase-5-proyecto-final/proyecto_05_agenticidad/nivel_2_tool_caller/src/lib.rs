@@ -3,9 +3,9 @@
 
 pub mod tools;
 
+use crate::tools::{ToolCall, ToolExecutor};
 use std::path::Path;
 use std::process::Command;
-use crate::tools::{ToolCall, ToolExecutor};
 
 pub struct ToolCallerAgent {
     pub model: String,
@@ -72,15 +72,21 @@ impl ToolCallerAgent {
 
                 let choice = &json["choices"][0]["message"];
                 if let Some(tool_calls_json) = choice.get("tool_calls") {
-                    if let Ok(calls) = serde_json::from_value::<Vec<ToolCall>>(tool_calls_json.clone()) {
+                    if let Ok(calls) =
+                        serde_json::from_value::<Vec<ToolCall>>(tool_calls_json.clone())
+                    {
                         if let Some(first_call) = calls.first() {
                             let tool_name = &first_call.function.name;
                             let args = &first_call.function.arguments;
 
                             // Ejecutar la herramienta en el sandbox local
-                            let exec_result = ToolExecutor::execute_tool(sandbox_dir, tool_name, args)?;
+                            let exec_result =
+                                ToolExecutor::execute_tool(sandbox_dir, tool_name, args)?;
                             return Ok((
-                                format!("Herramienta ejecutada: '{}' con argumentos: {}", tool_name, args),
+                                format!(
+                                    "Herramienta ejecutada: '{}' con argumentos: {}",
+                                    tool_name, args
+                                ),
                                 Some(exec_result),
                             ));
                         }
@@ -89,7 +95,10 @@ impl ToolCallerAgent {
 
                 // Si respondió texto en lugar de tool_call estructurado
                 if let Some(content) = choice["content"].as_str() {
-                    return Ok((format!("Respuesta en texto (sin llamada a herramienta): {content}"), None));
+                    return Ok((
+                        format!("Respuesta en texto (sin llamada a herramienta): {content}"),
+                        None,
+                    ));
                 }
             }
         }

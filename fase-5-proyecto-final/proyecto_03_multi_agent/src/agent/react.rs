@@ -97,7 +97,9 @@ impl ReActEngine {
                         thought,
                         action: Some((tool_name.clone(), arguments)),
                         observation: Some(output_val.clone()),
-                        reflection: Some(format!("Herramienta '{tool_name}' completada en {duration_ms}ms")),
+                        reflection: Some(format!(
+                            "Herramienta '{tool_name}' completada en {duration_ms}ms"
+                        )),
                     };
 
                     context.record_step(step);

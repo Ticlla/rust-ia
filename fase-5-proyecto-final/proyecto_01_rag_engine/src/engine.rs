@@ -4,7 +4,7 @@ use crate::config::RagConfig;
 use crate::embeddings::DenseEmbedder;
 use crate::ingestion::{Document, DocumentChunk, TextChunker};
 use crate::reranking::CrossEncoderReranker;
-use crate::search::{fuse_reciprocal_rank, Bm25Index, DenseIndex};
+use crate::search::{Bm25Index, DenseIndex, fuse_reciprocal_rank};
 use candle_core::{Device, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

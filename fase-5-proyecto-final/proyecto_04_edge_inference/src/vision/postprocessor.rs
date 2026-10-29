@@ -46,11 +46,7 @@ impl VisionPostprocessor {
 
     /// Extrae las Top-K predicciones ordenadas por confianza descendente
     pub fn extract_top_k(&self, probabilities: &[f32], k: usize) -> Vec<VisionClassPrediction> {
-        let mut indexed: Vec<(usize, f32)> = probabilities
-            .iter()
-            .cloned()
-            .enumerate()
-            .collect();
+        let mut indexed: Vec<(usize, f32)> = probabilities.iter().cloned().enumerate().collect();
 
         // Ordenamiento descendente por probabilidad
         indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));

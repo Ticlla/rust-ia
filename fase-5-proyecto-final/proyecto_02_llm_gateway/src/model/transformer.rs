@@ -40,15 +40,39 @@ impl GatewayTransformer {
 
         for _ in 0..config.n_layers {
             let norm1_w = Tensor::ones(embed_dim, candle_core::DType::F32, dev)?;
-            let q_proj = Linear::new((Tensor::randn(0.0f32, 1.0f32, (embed_dim, embed_dim), dev)? * (scale as f64))?, None);
-            let k_proj = Linear::new((Tensor::randn(0.0f32, 1.0f32, (embed_dim, embed_dim), dev)? * (scale as f64))?, None);
-            let v_proj = Linear::new((Tensor::randn(0.0f32, 1.0f32, (embed_dim, embed_dim), dev)? * (scale as f64))?, None);
-            let o_proj = Linear::new((Tensor::randn(0.0f32, 1.0f32, (embed_dim, embed_dim), dev)? * (scale as f64))?, None);
+            let q_proj = Linear::new(
+                (Tensor::randn(0.0f32, 1.0f32, (embed_dim, embed_dim), dev)? * (scale as f64))?,
+                None,
+            );
+            let k_proj = Linear::new(
+                (Tensor::randn(0.0f32, 1.0f32, (embed_dim, embed_dim), dev)? * (scale as f64))?,
+                None,
+            );
+            let v_proj = Linear::new(
+                (Tensor::randn(0.0f32, 1.0f32, (embed_dim, embed_dim), dev)? * (scale as f64))?,
+                None,
+            );
+            let o_proj = Linear::new(
+                (Tensor::randn(0.0f32, 1.0f32, (embed_dim, embed_dim), dev)? * (scale as f64))?,
+                None,
+            );
 
             let norm2_w = Tensor::ones(embed_dim, candle_core::DType::F32, dev)?;
-            let gate_proj = Linear::new((Tensor::randn(0.0f32, 1.0f32, (intermediate_dim, embed_dim), dev)? * (scale as f64))?, None);
-            let up_proj = Linear::new((Tensor::randn(0.0f32, 1.0f32, (intermediate_dim, embed_dim), dev)? * (scale as f64))?, None);
-            let down_proj = Linear::new((Tensor::randn(0.0f32, 1.0f32, (embed_dim, intermediate_dim), dev)? * (scale as f64))?, None);
+            let gate_proj = Linear::new(
+                (Tensor::randn(0.0f32, 1.0f32, (intermediate_dim, embed_dim), dev)?
+                    * (scale as f64))?,
+                None,
+            );
+            let up_proj = Linear::new(
+                (Tensor::randn(0.0f32, 1.0f32, (intermediate_dim, embed_dim), dev)?
+                    * (scale as f64))?,
+                None,
+            );
+            let down_proj = Linear::new(
+                (Tensor::randn(0.0f32, 1.0f32, (embed_dim, intermediate_dim), dev)?
+                    * (scale as f64))?,
+                None,
+            );
 
             layers.push(TransformerLayerWeights {
                 norm1_w,
@@ -108,9 +132,15 @@ impl GatewayTransformer {
             let v = layer.v_proj.forward(&norm_x)?;
 
             // Reshape para cabezas: [1, S, H, D]
-            let q_heads = q.reshape((1, seq_len, self.config.n_heads, head_dim))?.transpose(1, 2)?; // [1, H, S, D]
-            let k_heads = k.reshape((1, seq_len, self.config.n_heads, head_dim))?.transpose(1, 2)?;
-            let v_heads = v.reshape((1, seq_len, self.config.n_heads, head_dim))?.transpose(1, 2)?;
+            let q_heads = q
+                .reshape((1, seq_len, self.config.n_heads, head_dim))?
+                .transpose(1, 2)?; // [1, H, S, D]
+            let k_heads = k
+                .reshape((1, seq_len, self.config.n_heads, head_dim))?
+                .transpose(1, 2)?;
+            let v_heads = v
+                .reshape((1, seq_len, self.config.n_heads, head_dim))?
+                .transpose(1, 2)?;
 
             // 3. Escribir nuevos tokens en el Paged KV-Cache
             if is_prefill {
@@ -121,7 +151,13 @@ impl GatewayTransformer {
 
                     let k_tok = k_heads.squeeze(0)?.narrow(1, s, 1)?.squeeze(1)?; // [H, D]
                     let v_tok = v_heads.squeeze(0)?.narrow(1, s, 1)?.squeeze(1)?; // [H, D]
-                    paged_cache.write_token(layer_idx, phys_block, offset_in_block, &k_tok, &v_tok)?;
+                    paged_cache.write_token(
+                        layer_idx,
+                        phys_block,
+                        offset_in_block,
+                        &k_tok,
+                        &v_tok,
+                    )?;
                 }
             } else {
                 // Decode: Solo 1 token
@@ -136,7 +172,8 @@ impl GatewayTransformer {
             }
 
             // 4. Gather de todo el contexto acumulado de la secuencia
-            let (cached_k, cached_v) = paged_cache.gather_sequence_kv(layer_idx, block_table, seq_len)?;
+            let (cached_k, cached_v) =
+                paged_cache.gather_sequence_kv(layer_idx, block_table, seq_len)?;
 
             // 5. Scaled Dot-Product Attention
             let k_t = cached_k.transpose(2, 3)?;
@@ -163,10 +200,11 @@ impl GatewayTransformer {
 
             let weights = candle_nn::ops::softmax(&scores, 3)?;
             let attn_out = weights.matmul(&cached_v)?; // [1, H, S, D]
-            let attn_out = attn_out
-                .transpose(1, 2)?
-                .contiguous()?
-                .reshape((1, seq_len, self.config.embed_dim))?;
+            let attn_out = attn_out.transpose(1, 2)?.contiguous()?.reshape((
+                1,
+                seq_len,
+                self.config.embed_dim,
+            ))?;
             let attn_proj = layer.o_proj.forward(&attn_out)?;
 
             // Residual 1

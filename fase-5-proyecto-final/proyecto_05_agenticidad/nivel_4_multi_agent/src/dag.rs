@@ -1,9 +1,9 @@
 //! Motor de Grafo Acíclico Dirigido (DAG) para coordinación multi-agente.
 //! Gestiona la descomposición de tareas, dependencias y ejecución topológica.
 
+use crate::agents::AgentRole;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
-use crate::agents::AgentRole;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskStatus {
@@ -83,7 +83,10 @@ impl TaskDag {
         for (id, node) in &self.nodes {
             for dep in &node.dependencies {
                 if !self.nodes.contains_key(dep) {
-                    return Err(format!("Dependencia inexistente '{}' referenciada por '{}'", dep, id));
+                    return Err(format!(
+                        "Dependencia inexistente '{}' referenciada por '{}'",
+                        dep, id
+                    ));
                 }
                 dependents.get_mut(dep).unwrap().push(id.clone());
                 *in_degree.get_mut(id).unwrap() += 1;
@@ -124,7 +127,9 @@ impl TaskDag {
         }
 
         if visited.len() != self.nodes.len() {
-            return Err("Se detectó un ciclo en el grafo de dependencias (DAG inválido)".to_string());
+            return Err(
+                "Se detectó un ciclo en el grafo de dependencias (DAG inválido)".to_string(),
+            );
         }
 
         Ok(batches)

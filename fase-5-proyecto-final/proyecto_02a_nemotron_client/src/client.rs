@@ -1,8 +1,8 @@
 //! Cliente asíncrono para NVIDIA Nemotron con soporte de streaming SSE y modo simulador.
 
-use std::time::Duration;
 use futures_util::StreamExt;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
+use std::time::Duration;
 use tokio::sync::mpsc;
 
 use crate::config::{BackendMode, NemotronConfig};
@@ -28,7 +28,10 @@ impl NemotronClient {
     }
 
     /// Envío de mensaje en modo síncrono/bloqueante completo (sin streaming)
-    pub async fn complete(&self, messages: &[ChatMessage]) -> Result<ChatCompletionResponse, String> {
+    pub async fn complete(
+        &self,
+        messages: &[ChatMessage],
+    ) -> Result<ChatCompletionResponse, String> {
         match self.config.backend_mode {
             BackendMode::MockSimulator => {
                 tokio::time::sleep(Duration::from_millis(300)).await;
@@ -56,14 +59,18 @@ impl NemotronClient {
                 })
             }
             BackendMode::NvidiaNim | BackendMode::LocalEngine => {
-                let url = format!("{}/chat/completions", self.config.base_url.trim_end_matches('/'));
+                let url = format!(
+                    "{}/chat/completions",
+                    self.config.base_url.trim_end_matches('/')
+                );
                 let mut headers = HeaderMap::new();
                 headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 if let Some(key) = &self.config.api_key {
                     let auth_val = format!("Bearer {key}");
                     headers.insert(
                         AUTHORIZATION,
-                        HeaderValue::from_str(&auth_val).map_err(|e| format!("Header inválido: {e}"))?,
+                        HeaderValue::from_str(&auth_val)
+                            .map_err(|e| format!("Header inválido: {e}"))?,
                     );
                 }
 
@@ -132,14 +139,18 @@ impl NemotronClient {
                 Ok(rx)
             }
             BackendMode::NvidiaNim | BackendMode::LocalEngine => {
-                let url = format!("{}/chat/completions", self.config.base_url.trim_end_matches('/'));
+                let url = format!(
+                    "{}/chat/completions",
+                    self.config.base_url.trim_end_matches('/')
+                );
                 let mut headers = HeaderMap::new();
                 headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 if let Some(key) = &self.config.api_key {
                     let auth_val = format!("Bearer {key}");
                     headers.insert(
                         AUTHORIZATION,
-                        HeaderValue::from_str(&auth_val).map_err(|e| format!("Header inválido: {e}"))?,
+                        HeaderValue::from_str(&auth_val)
+                            .map_err(|e| format!("Header inválido: {e}"))?,
                     );
                 }
 
@@ -204,7 +215,9 @@ impl NemotronClient {
                                 }
                             }
                             Err(e) => {
-                                let _ = tx.send(Err(format!("Error de lectura en byte stream: {e}"))).await;
+                                let _ = tx
+                                    .send(Err(format!("Error de lectura en byte stream: {e}")))
+                                    .await;
                                 return;
                             }
                         }

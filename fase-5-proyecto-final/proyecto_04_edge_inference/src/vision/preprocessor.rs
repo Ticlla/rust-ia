@@ -1,8 +1,8 @@
 //! Preprocesador de imágenes de alta velocidad con letterboxing, normalización y conversión NCHW.
 
+use crate::vision::types::LetterboxInfo;
 use image::{DynamicImage, GenericImageView, ImageFormat, Rgb, RgbImage};
 use std::io::Cursor;
-use crate::vision::types::LetterboxInfo;
 
 /// Parámetros estándar de normalización ImageNet
 pub const IMAGENET_MEAN: [f32; 3] = [0.485, 0.456, 0.406];
@@ -60,11 +60,15 @@ impl VisionPreprocessor {
     /// Redimensiona manteniendo la relación de aspecto (Letterbox) rellenando bordes
     pub fn letterbox(&self, img: &DynamicImage) -> (RgbImage, LetterboxInfo) {
         let (orig_w, orig_h) = img.dimensions();
-        let scale = (self.target_w as f32 / orig_w as f32)
-            .min(self.target_h as f32 / orig_h as f32);
+        let scale =
+            (self.target_w as f32 / orig_w as f32).min(self.target_h as f32 / orig_h as f32);
 
-        let new_w = ((orig_w as f32 * scale).round() as u32).min(self.target_w).max(1);
-        let new_h = ((orig_h as f32 * scale).round() as u32).min(self.target_h).max(1);
+        let new_w = ((orig_w as f32 * scale).round() as u32)
+            .min(self.target_w)
+            .max(1);
+        let new_h = ((orig_h as f32 * scale).round() as u32)
+            .min(self.target_h)
+            .max(1);
 
         let pad_x = (self.target_w - new_w) / 2;
         let pad_y = (self.target_h - new_h) / 2;
@@ -121,7 +125,10 @@ impl VisionPreprocessor {
     }
 
     /// Pipeline completo: bytes -> decodificación -> letterbox -> NCHW tensor
-    pub fn process_bytes(&self, bytes: &[u8]) -> Result<(Vec<f32>, (u32, u32), LetterboxInfo), String> {
+    pub fn process_bytes(
+        &self,
+        bytes: &[u8],
+    ) -> Result<(Vec<f32>, (u32, u32), LetterboxInfo), String> {
         let img = self.decode_bytes(bytes)?;
         let original_dims = img.dimensions();
         let (canvas, letterbox_info) = self.letterbox(&img);

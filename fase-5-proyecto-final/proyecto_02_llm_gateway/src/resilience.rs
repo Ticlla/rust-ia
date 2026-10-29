@@ -29,7 +29,7 @@ impl TokenBucket {
     pub fn try_acquire(&mut self, cost: f64) -> bool {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last_refill).as_secs_f64();
-        
+
         // Recargar tokens en función del tiempo transcurrido, acotado a la capacidad máxima
         self.tokens = (self.tokens + elapsed * self.refill_rate_per_sec).min(self.capacity);
         self.last_refill = now;

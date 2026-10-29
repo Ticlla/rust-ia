@@ -41,7 +41,10 @@ impl fmt::Display for EngineError {
             Self::PoolExhausted => write!(f, "Pool de sesiones ONNX agotado (timeout)"),
             Self::ModelNotFound(path) => write!(f, "Modelo ONNX no encontrado en: {path}"),
             Self::ShapeMismatch { expected, got } => {
-                write!(f, "Discrepancia de tensor: esperado {expected} elementos, recibidos {got}")
+                write!(
+                    f,
+                    "Discrepancia de tensor: esperado {expected} elementos, recibidos {got}"
+                )
             }
         }
     }

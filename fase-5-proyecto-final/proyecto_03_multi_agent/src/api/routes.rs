@@ -1,9 +1,9 @@
 //! Enrutador de la API Axum.
 
-use super::handlers::{events_stream_handler, health_handler, run_workflow_handler, AppState};
+use super::handlers::{AppState, events_stream_handler, health_handler, run_workflow_handler};
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use std::sync::Arc;
 

@@ -1,8 +1,8 @@
 //! Cola de inferencia con control de contrapresión (Backpressure) y protección contra sobrecarga.
 
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
 
@@ -20,7 +20,10 @@ impl fmt::Display for QueueError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Saturated { depth, capacity } => {
-                write!(f, "Cola saturada (Backpressure activo): {depth}/{capacity} solicitudes en espera")
+                write!(
+                    f,
+                    "Cola saturada (Backpressure activo): {depth}/{capacity} solicitudes en espera"
+                )
             }
             Self::Timeout(dur) => write!(f, "Tiempo de espera en cola excedido ({dur:?})"),
             Self::WorkerDropped => write!(f, "El worker de inferencia finalizó inesperadamente"),

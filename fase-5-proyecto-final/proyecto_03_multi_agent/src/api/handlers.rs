@@ -4,11 +4,11 @@ use super::models::{HealthResponse, WorkflowRequest, WorkflowResponse};
 use crate::events::EventBus;
 use crate::orchestrator::SupervisorOrchestrator;
 use axum::{
+    Json,
     extract::State,
     http::StatusCode,
-    response::sse::{Event, KeepAlive, Sse},
     response::IntoResponse,
-    Json,
+    response::sse::{Event, KeepAlive, Sse},
 };
 use futures_util::stream::Stream;
 use std::convert::Infallible;

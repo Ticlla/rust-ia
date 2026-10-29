@@ -6,9 +6,9 @@ pub mod agents;
 pub mod dag;
 pub mod tools;
 
+use serde_json::Value;
 use std::path::Path;
 use std::process::Command;
-use serde_json::Value;
 
 use crate::agents::{AgentMessage, AgentRole};
 use crate::dag::{TaskDag, TaskNode};
@@ -104,7 +104,12 @@ impl MultiAgentOrchestrator {
             for task_id in batch {
                 let (role, title, description, deps) = {
                     let task = dag.get_task(&task_id).unwrap();
-                    (task.role, task.title.clone(), task.description.clone(), task.dependencies.clone())
+                    (
+                        task.role,
+                        task.title.clone(),
+                        task.description.clone(),
+                        task.dependencies.clone(),
+                    )
                 };
 
                 events.push(OrchestrationEvent {
@@ -125,14 +130,16 @@ impl MultiAgentOrchestrator {
                 }
 
                 // Ejecutar el agente asignado
-                let task_output = self.execute_agent_task(
-                    sandbox_dir,
-                    role,
-                    &task_id,
-                    &description,
-                    &prior_context,
-                    &mut events,
-                ).await;
+                let task_output = self
+                    .execute_agent_task(
+                        sandbox_dir,
+                        role,
+                        &task_id,
+                        &description,
+                        &prior_context,
+                        &mut events,
+                    )
+                    .await;
 
                 dag.complete_task(&task_id, task_output.clone());
 
@@ -157,7 +164,8 @@ impl MultiAgentOrchestrator {
                 .map(|o| o.status.success())
                 .unwrap_or(false);
 
-            let auditor_passed = dag.get_task("3_audit_test")
+            let auditor_passed = dag
+                .get_task("3_audit_test")
                 .and_then(|t| t.output.as_ref())
                 .map(|out| out.contains("APROBADO") || out.contains("EXITO"))
                 .unwrap_or(false);
@@ -167,7 +175,8 @@ impl MultiAgentOrchestrator {
             }
 
             retry_count += 1;
-            let failure_feedback = dag.get_task("3_audit_test")
+            let failure_feedback = dag
+                .get_task("3_audit_test")
                 .and_then(|t| t.output.as_ref())
                 .cloned()
                 .unwrap_or_else(|| "Fallo al ejecutar las pruebas".to_string());
@@ -195,14 +204,16 @@ impl MultiAgentOrchestrator {
             dag.complete_task("2_code_patch", coder_retry_output);
 
             // Re-ejecutar AuditorAgent para re-evaluación
-            let audit_retry_output = self.execute_agent_task(
-                sandbox_dir,
-                AgentRole::Auditor,
-                &format!("3_audit_test_retry_{retry_count}"),
-                "Re-audita el código corregido ejecutando 'run_cargo_test'.",
-                "",
-                &mut events,
-            ).await;
+            let audit_retry_output = self
+                .execute_agent_task(
+                    sandbox_dir,
+                    AgentRole::Auditor,
+                    &format!("3_audit_test_retry_{retry_count}"),
+                    "Re-audita el código corregido ejecutando 'run_cargo_test'.",
+                    "",
+                    &mut events,
+                )
+                .await;
 
             dag.complete_task("3_audit_test", audit_retry_output);
         }
@@ -214,7 +225,8 @@ impl MultiAgentOrchestrator {
             .map(|o| o.status.success())
             .unwrap_or(false);
 
-        let auditor_passed = dag.get_task("3_audit_test")
+        let auditor_passed = dag
+            .get_task("3_audit_test")
             .and_then(|t| t.output.as_ref())
             .map(|out| out.contains("APROBADO") || out.contains("EXITO"))
             .unwrap_or(false);
@@ -274,12 +286,19 @@ impl MultiAgentOrchestrator {
                             let content = choice["content"].as_str().unwrap_or("").to_string();
 
                             if let Some(tool_calls_val) = choice.get("tool_calls") {
-                                if let Ok(calls) = serde_json::from_value::<Vec<ToolCall>>(tool_calls_val.clone()) {
+                                if let Ok(calls) =
+                                    serde_json::from_value::<Vec<ToolCall>>(tool_calls_val.clone())
+                                {
                                     if let Some(call) = calls.first() {
                                         let tool_name = &call.function.name;
                                         let args = &call.function.arguments;
 
-                                        let observation = ToolExecutor::execute_tool(sandbox_dir, role, tool_name, args);
+                                        let observation = ToolExecutor::execute_tool(
+                                            sandbox_dir,
+                                            role,
+                                            tool_name,
+                                            args,
+                                        );
 
                                         events.push(OrchestrationEvent {
                                             task_id: task_id.to_string(),
@@ -295,13 +314,20 @@ impl MultiAgentOrchestrator {
                                             "content": observation.clone()
                                         }));
 
-                                        final_output = format!("{content}\n[Observación de {tool_name}]: {observation}");
+                                        final_output = format!(
+                                            "{content}\n[Observación de {tool_name}]: {observation}"
+                                        );
 
                                         // Si el rol ya ejecutó su acción terminal
-                                        if role == AgentRole::Coder && tool_name == "write_file" && !observation.contains("Error") {
+                                        if role == AgentRole::Coder
+                                            && tool_name == "write_file"
+                                            && !observation.contains("Error")
+                                        {
                                             return final_output;
                                         }
-                                        if role == AgentRole::Auditor && tool_name == "run_cargo_test" {
+                                        if role == AgentRole::Auditor
+                                            && tool_name == "run_cargo_test"
+                                        {
                                             return final_output;
                                         }
 
@@ -331,7 +357,8 @@ impl MultiAgentOrchestrator {
         // Simulación determinista offline para cada rol
         match role {
             AgentRole::Analyzer => {
-                let obs_check = ToolExecutor::execute_tool(sandbox_dir, role, "run_cargo_check", "{}");
+                let obs_check =
+                    ToolExecutor::execute_tool(sandbox_dir, role, "run_cargo_check", "{}");
                 let report = format!(
                     "Diagnóstico de AnalyzerAgent:\n\
                     - Fallo: error[E0308]: mismatched types (expected String, found f64)\n\
@@ -375,7 +402,8 @@ mod tests {
                 let args = serde_json::json!({
                     "relative_path": "src/main.rs",
                     "content": fixed_code
-                }).to_string();
+                })
+                .to_string();
 
                 let obs_write = ToolExecutor::execute_tool(sandbox_dir, role, "write_file", &args);
 
@@ -389,7 +417,8 @@ mod tests {
                 "Parche de código aplicado exitosamente en 'src/main.rs'.".to_string()
             }
             AgentRole::Auditor => {
-                let obs_test = ToolExecutor::execute_tool(sandbox_dir, role, "run_cargo_test", "{}");
+                let obs_test =
+                    ToolExecutor::execute_tool(sandbox_dir, role, "run_cargo_test", "{}");
 
                 events.push(OrchestrationEvent {
                     task_id: task_id.to_string(),

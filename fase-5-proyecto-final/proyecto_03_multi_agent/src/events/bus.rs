@@ -15,10 +15,7 @@ pub enum AgentEvent {
         timestamp_ms: u64,
     },
     /// Paso de razonamiento interno de un agente (ReAct Thought).
-    AgentThinking {
-        agent_role: String,
-        thought: String,
-    },
+    AgentThinking { agent_role: String, thought: String },
     /// Disparo de invocación de una herramienta con sus parámetros.
     ToolCallStarted {
         agent_role: String,
@@ -58,10 +55,7 @@ pub enum AgentEvent {
         total_duration_ms: u64,
     },
     /// Fracaso o interrupción del flujo de trabajo.
-    WorkflowFailed {
-        workflow_id: String,
-        error: String,
-    },
+    WorkflowFailed { workflow_id: String, error: String },
 }
 
 /// Bus de eventos de alta concurrencia que permite a múltiples suscriptores (SSE, logs, métricas)

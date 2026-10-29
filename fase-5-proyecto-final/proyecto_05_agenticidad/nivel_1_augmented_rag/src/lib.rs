@@ -3,9 +3,9 @@
 
 pub mod retriever;
 
+use crate::retriever::CodebaseRetriever;
 use std::path::Path;
 use std::process::Command;
-use crate::retriever::CodebaseRetriever;
 
 pub struct AugmentedAgent {
     pub model: String,
@@ -31,7 +31,11 @@ impl AugmentedAgent {
     }
 
     /// Ejecuta la consulta aumentada con RAG
-    pub async fn query_with_rag(&self, sandbox_dir: &Path, goal: &str) -> Result<(String, String), String> {
+    pub async fn query_with_rag(
+        &self,
+        sandbox_dir: &Path,
+        goal: &str,
+    ) -> Result<(String, String), String> {
         // 1. Recuperar contexto del código y documentación
         let augmented_prompt = CodebaseRetriever::build_augmented_prompt(sandbox_dir, goal)?;
 
@@ -70,9 +74,9 @@ impl AugmentedAgent {
         }
 
         // Simulación offline fiel a la respuesta con RAG
-        let fallback_response = 
+        let fallback_response =
             "```rust\npub fn calculate_tax(amount: f64) -> String {\n    format!(\"{:.2}\", amount * 0.18)\n}\n```"
-            .to_string();
+                .to_string();
 
         Ok((augmented_prompt, fallback_response))
     }

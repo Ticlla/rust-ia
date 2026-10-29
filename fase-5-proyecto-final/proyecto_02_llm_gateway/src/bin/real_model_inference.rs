@@ -39,7 +39,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let load_start = Instant::now();
     let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[weights_path], DType::F32, &dev)? };
     let model = Llama::load(vb, &config)?;
-    println!("    -> Modelo cargado exitosamente en {:.2} ms!", load_start.elapsed().as_secs_f64() * 1000.0);
+    println!(
+        "    -> Modelo cargado exitosamente en {:.2} ms!",
+        load_start.elapsed().as_secs_f64() * 1000.0
+    );
 
     println!("[3] Cargando tokenizador Hugging Face...");
     let tokenizer = Tokenizer::from_file(&tokenizer_path).map_err(|e| e.to_string())?;
@@ -51,7 +54,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let prompt_len = prompt_ids.len();
 
     println!("\nPrompt: \"{}\"", prompt);
-    println!("Tokens del prompt ({} tokens): {:?}", prompt_len, prompt_ids);
+    println!(
+        "Tokens del prompt ({} tokens): {:?}",
+        prompt_len, prompt_ids
+    );
 
     let mut cache = Cache::new(true, DType::F32, &config, &dev)?;
 
@@ -64,7 +70,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let logits = model.forward(&input_tensor, 0, &mut cache)?;
     let ttft = prefill_start.elapsed();
 
-    println!("    -> TTFT (Time To First Token): {:.2} ms", ttft.as_secs_f64() * 1000.0);
+    println!(
+        "    -> TTFT (Time To First Token): {:.2} ms",
+        ttft.as_secs_f64() * 1000.0
+    );
 
     // Muestreo del primer token generado
     let last_logits = logits.squeeze(0)?.squeeze(0)?;
@@ -112,7 +121,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("MÉTRICAS REALES EN TU INTEL CORE I5:");
     println!("- Tokens generados: {}", generated_count);
     println!("- TPOT (Time Per Output Token): {:.2} ms/token", tpot);
-    println!("- Throughput: {:.2} tokens/segundo", if tpot > 0.0 { 1000.0 / tpot } else { 0.0 });
+    println!(
+        "- Throughput: {:.2} tokens/segundo",
+        if tpot > 0.0 { 1000.0 / tpot } else { 0.0 }
+    );
     println!("==============================================================================");
 
     Ok(())

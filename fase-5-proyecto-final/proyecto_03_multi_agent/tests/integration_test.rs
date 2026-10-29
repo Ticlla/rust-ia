@@ -1,11 +1,11 @@
 //! Suite de pruebas de integración para el Autonomous Agent & Multi-Agent Orchestration Framework.
 
-use axum::body::{to_bytes, Body};
+use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode};
 use proyecto_03_multi_agent::agent::{
     AgentContext, AgentRole, AgentState, DeterministicLlmBackend, ReActEngine,
 };
-use proyecto_03_multi_agent::api::{build_router, AppState};
+use proyecto_03_multi_agent::api::{AppState, build_router};
 use proyecto_03_multi_agent::create_default_system;
 use proyecto_03_multi_agent::events::EventBus;
 use proyecto_03_multi_agent::orchestrator::dag::{TaskGraph, TaskNode};
@@ -32,7 +32,10 @@ async fn test_tool_registry_and_execution() {
 
     // 1. Ejecución de la calculadora (128 * 16)
     let calc_res = registry
-        .execute("calculator", serde_json::json!({ "expression": "128 * 16" }))
+        .execute(
+            "calculator",
+            serde_json::json!({ "expression": "128 * 16" }),
+        )
         .await
         .expect("Calculator execution failed");
     assert!(calc_res.success);
@@ -146,8 +149,18 @@ async fn test_task_graph_dag_topological_resolution() {
 
     // Probar detección de ciclos en un grafo inválido
     let mut cyclic_graph = TaskGraph::new();
-    cyclic_graph.add_task(TaskNode::new("cA", AgentRole::Coder, "A", vec!["cB".into()]));
-    cyclic_graph.add_task(TaskNode::new("cB", AgentRole::Coder, "B", vec!["cA".into()]));
+    cyclic_graph.add_task(TaskNode::new(
+        "cA",
+        AgentRole::Coder,
+        "A",
+        vec!["cB".into()],
+    ));
+    cyclic_graph.add_task(TaskNode::new(
+        "cB",
+        AgentRole::Coder,
+        "B",
+        vec!["cA".into()],
+    ));
     assert!(cyclic_graph.has_cycle());
 }
 
@@ -178,7 +191,9 @@ async fn test_multi_agent_actor_coordination() {
     // Verificar que el bus recibió eventos
     let first_event = rx.recv().await.expect("Failed to receive first event");
     match first_event {
-        proyecto_03_multi_agent::events::AgentEvent::WorkflowStarted { workflow_id: wid, .. } => {
+        proyecto_03_multi_agent::events::AgentEvent::WorkflowStarted {
+            workflow_id: wid, ..
+        } => {
             assert_eq!(wid, workflow_id);
         }
         _ => {} // Evento capturado
@@ -240,18 +255,36 @@ async fn test_axum_api_and_sse_streaming() {
 // ---------------------------------------------------------------------------
 #[tokio::test]
 async fn test_intent_routing_conversational_vs_technical() {
-    use proyecto_03_multi_agent::orchestrator::semantic_router::{SemanticRouter, UserIntent};
     use proyecto_03_multi_agent::orchestrator::SupervisorOrchestrator;
+    use proyecto_03_multi_agent::orchestrator::semantic_router::{SemanticRouter, UserIntent};
 
     // 1. Pruebas de clasificación conversacional y opiniones
-    assert_eq!(SupervisorOrchestrator::classify_intent("hola"), UserIntent::Conversational);
-    assert_eq!(SupervisorOrchestrator::classify_intent("hi"), UserIntent::Conversational);
-    assert_eq!(SupervisorOrchestrator::classify_intent("¿Quién eres?"), UserIntent::Conversational);
-    assert_eq!(SupervisorOrchestrator::classify_intent("how are you?"), UserIntent::Conversational);
-    
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("hola"),
+        UserIntent::Conversational
+    );
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("hi"),
+        UserIntent::Conversational
+    );
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("¿Quién eres?"),
+        UserIntent::Conversational
+    );
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("how are you?"),
+        UserIntent::Conversational
+    );
+
     // CASO CLAVE: "¿Qué opinas de Rust?" (Contiene "rust", pero es una pregunta de opinión)
-    assert_eq!(SupervisorOrchestrator::classify_intent("que opinas de rust"), UserIntent::Conversational);
-    assert_eq!(SupervisorOrchestrator::classify_intent("qué opinas de rust"), UserIntent::Conversational);
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("que opinas de rust"),
+        UserIntent::Conversational
+    );
+    assert_eq!(
+        SupervisorOrchestrator::classify_intent("qué opinas de rust"),
+        UserIntent::Conversational
+    );
     assert_eq!(
         SupervisorOrchestrator::classify_intent("no me des codigo solo dime que opinas de rust"),
         UserIntent::Conversational
@@ -290,5 +323,8 @@ async fn test_intent_routing_conversational_vs_technical() {
 
     assert!(report.success);
     assert!(report.generated_code.is_none()); // No se forzó generación de código
-    assert!(report.final_synthesis.contains("Borrow Checker") || report.final_synthesis.contains("Rust"));
+    assert!(
+        report.final_synthesis.contains("Borrow Checker")
+            || report.final_synthesis.contains("Rust")
+    );
 }

@@ -51,7 +51,10 @@ fn test_stream_telemetry_metrics() {
     assert!(telemetry.ttft_ms().is_some());
     assert!(telemetry.ttft_ms().unwrap() >= 10.0);
     assert_eq!(telemetry.token_count, 3);
-    assert_eq!(telemetry.character_count, "Hola mundo Rust!".chars().count());
+    assert_eq!(
+        telemetry.character_count,
+        "Hola mundo Rust!".chars().count()
+    );
     assert!(telemetry.tokens_per_second() > 0.0);
 }
 
@@ -77,9 +80,7 @@ async fn test_mock_simulator_streaming_tokens() {
     let config = NemotronConfig::for_mock_simulator();
     let client = NemotronClient::new(config).unwrap();
 
-    let messages = vec![
-        ChatMessage::user("¿Qué sabes de arquitecturas GPU?"),
-    ];
+    let messages = vec![ChatMessage::user("¿Qué sabes de arquitecturas GPU?")];
 
     let mut rx = client.stream_chat(&messages).await.unwrap();
     let mut collected = String::new();
@@ -92,5 +93,7 @@ async fn test_mock_simulator_streaming_tokens() {
     }
 
     assert!(chunks_count > 5);
-    assert!(collected.contains("NVIDIA") || collected.contains("GPU") || collected.contains("Hopper"));
+    assert!(
+        collected.contains("NVIDIA") || collected.contains("GPU") || collected.contains("Hopper")
+    );
 }

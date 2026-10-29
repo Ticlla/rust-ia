@@ -6,18 +6,18 @@ use super::openai_types::{
 };
 use super::sse::create_sse_response;
 use crate::config::GatewayConfig;
+use crate::resilience::TokenBucketRateLimiter;
 use crate::scheduler::{ContinuousBatchScheduler, FinishReason, Sequence};
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::resilience::TokenBucketRateLimiter;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -163,9 +163,13 @@ async fn chat_completions_handler(
         });
         return Ok((
             StatusCode::TOO_MANY_REQUESTS,
-            [(axum::http::header::RETRY_AFTER, format!("{:.0}", retry_after))],
+            [(
+                axum::http::header::RETRY_AFTER,
+                format!("{:.0}", retry_after),
+            )],
             Json(err_json),
-        ).into_response());
+        )
+            .into_response());
     }
 
     let mut messages = payload.messages.clone();
@@ -188,19 +192,28 @@ async fn chat_completions_handler(
                                 if !hits.is_empty() {
                                     state.rag_retrievals_total.fetch_add(1, Ordering::Relaxed);
                                     let mut context_text = String::from(
-                                        "INFORMACIÓN RECUPERADA DE LA BASE DE CONOCIMIENTO (RAG EN MEMORIA):\n"
+                                        "INFORMACIÓN RECUPERADA DE LA BASE DE CONOCIMIENTO (RAG EN MEMORIA):\n",
                                     );
                                     for (idx, hit) in hits.iter().enumerate() {
-                                        let title = hit["doc_title"].as_str().unwrap_or("Documento");
+                                        let title =
+                                            hit["doc_title"].as_str().unwrap_or("Documento");
                                         let text = hit["text"].as_str().unwrap_or("");
-                                        context_text.push_str(&format!("[Fuente {}: {}]\n{}\n\n", idx + 1, title, text));
+                                        context_text.push_str(&format!(
+                                            "[Fuente {}: {}]\n{}\n\n",
+                                            idx + 1,
+                                            title,
+                                            text
+                                        ));
                                     }
                                     context_text.push_str("INSTRUCCIÓN: Responde a la pregunta del usuario utilizando como base los hechos verificados del contexto recuperado arriba.");
 
-                                    messages.insert(0, ChatMessage {
-                                        role: "system".to_string(),
-                                        content: context_text,
-                                    });
+                                    messages.insert(
+                                        0,
+                                        ChatMessage {
+                                            role: "system".to_string(),
+                                            content: context_text,
+                                        },
+                                    );
                                 }
                             }
                         }
@@ -217,7 +230,11 @@ async fn chat_completions_handler(
                 .unwrap_or_else(|_| "nvidia/nemotron-3.5-bolt-e4b".to_string());
 
             let client = reqwest::Client::new();
-            let max_tokens = if payload.max_tokens == 0 { 256 } else { payload.max_tokens };
+            let max_tokens = if payload.max_tokens == 0 {
+                256
+            } else {
+                payload.max_tokens
+            };
             let body = serde_json::json!({
                 "model": model,
                 "messages": messages,
@@ -258,14 +275,18 @@ async fn chat_completions_handler(
     }
     prompt.push_str("assistant: ");
 
-    let prompt_tokens = state
-        .scheduler
-        .tokenizer
-        .encode(&prompt)
-        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Error de tokenización: {}", e)))?;
+    let prompt_tokens = state.scheduler.tokenizer.encode(&prompt).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            format!("Error de tokenización: {}", e),
+        )
+    })?;
 
     if prompt_tokens.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "Prompt no puede estar vacío".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Prompt no puede estar vacío".to_string(),
+        ));
     }
 
     let seq_id = format!("chatcmpl-{}", Uuid::new_v4());

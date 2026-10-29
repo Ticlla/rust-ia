@@ -1,7 +1,7 @@
 //! Pool de sesiones ONNX concurrentes sin contención de locks ni recompilación de grafos.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use tokio::sync::{Mutex, Semaphore};
 
@@ -47,7 +47,9 @@ impl SingleModelPool {
                 .map_err(|e| EngineError::SessionInit(format!("Fallo with_inter_threads: {e}")))?
                 .commit_from_memory(model_bytes)
                 .map_err(|e| {
-                    EngineError::SessionInit(format!("Fallo commit_from_memory en sesión #{i}: {e}"))
+                    EngineError::SessionInit(format!(
+                        "Fallo commit_from_memory en sesión #{i}: {e}"
+                    ))
                 })?;
 
             let input_name = session

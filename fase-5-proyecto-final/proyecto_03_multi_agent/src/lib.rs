@@ -33,8 +33,8 @@ pub fn create_system_with_backend(
     tools.register(Arc::new(RustCodeValidatorTool));
 
     // Spawneo de actores especializados (Modelo de Actores en Tokio)
-    let researcher_engine = ReActEngine::new(llm_backend.clone(), tools.clone())
-        .with_event_bus(event_bus.clone());
+    let researcher_engine =
+        ReActEngine::new(llm_backend.clone(), tools.clone()).with_event_bus(event_bus.clone());
     let researcher = AgentActor::spawn(
         AgentRole::Researcher,
         researcher_engine,
@@ -43,8 +43,8 @@ pub fn create_system_with_backend(
         32,
     );
 
-    let coder_engine = ReActEngine::new(llm_backend.clone(), tools.clone())
-        .with_event_bus(event_bus.clone());
+    let coder_engine =
+        ReActEngine::new(llm_backend.clone(), tools.clone()).with_event_bus(event_bus.clone());
     let coder = AgentActor::spawn(
         AgentRole::Coder,
         coder_engine,
@@ -53,8 +53,8 @@ pub fn create_system_with_backend(
         32,
     );
 
-    let reviewer_engine = ReActEngine::new(llm_backend.clone(), tools.clone())
-        .with_event_bus(event_bus.clone());
+    let reviewer_engine =
+        ReActEngine::new(llm_backend.clone(), tools.clone()).with_event_bus(event_bus.clone());
     let reviewer = AgentActor::spawn(
         AgentRole::Reviewer,
         reviewer_engine,

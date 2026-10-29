@@ -45,7 +45,8 @@ impl StreamTelemetry {
 
     /// Tiempo hasta el primer token (Time To First Token) en milisegundos
     pub fn ttft_ms(&self) -> Option<f64> {
-        self.first_token_time.map(|t| t.duration_since(self.start_time).as_secs_f64() * 1000.0)
+        self.first_token_time
+            .map(|t| t.duration_since(self.start_time).as_secs_f64() * 1000.0)
     }
 
     /// Duración total de la generación en segundos

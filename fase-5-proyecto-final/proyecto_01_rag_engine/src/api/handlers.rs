@@ -3,14 +3,14 @@
 use super::models::{HealthResponse, IngestRequest, IngestResponse, SearchRequest, SearchResponse};
 use crate::engine::EnterpriseRagEngine;
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 use tokio::sync::RwLock;
 

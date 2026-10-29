@@ -14,7 +14,11 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn new(id: impl Into<String>, title: impl Into<String>, content: impl Into<String>) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        title: impl Into<String>,
+        content: impl Into<String>,
+    ) -> Self {
         Self {
             id: id.into(),
             title: title.into(),

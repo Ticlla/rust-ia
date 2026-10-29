@@ -17,29 +17,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener_handle = tokio::spawn(async move {
         while let Ok(event) = receiver.recv().await {
             match event {
-                AgentEvent::WorkflowStarted { workflow_id, goal, .. } => {
+                AgentEvent::WorkflowStarted {
+                    workflow_id, goal, ..
+                } => {
                     println!("🚀 [WORKFLOW INICIADO] ID: {workflow_id}");
                     println!("🎯 [META]: {goal}\n");
                 }
-                AgentEvent::AgentThinking { agent_role, thought } => {
+                AgentEvent::AgentThinking {
+                    agent_role,
+                    thought,
+                } => {
                     println!("💭 [{agent_role}] Razonamiento (Thought):");
                     println!("   {thought}\n");
                 }
-                AgentEvent::ToolCallStarted { agent_role, tool_name, arguments } => {
+                AgentEvent::ToolCallStarted {
+                    agent_role,
+                    tool_name,
+                    arguments,
+                } => {
                     println!("🛠️  [{agent_role}] Invocando Tool (Action): `{tool_name}`");
                     println!("   Parámetros: {arguments}\n");
                 }
-                AgentEvent::ToolCallCompleted { agent_role, tool_name, success, duration_ms, .. } => {
-                    println!("📋 [{agent_role}] Tool Completada: `{tool_name}` en {duration_ms}ms (Éxito: {success})\n");
+                AgentEvent::ToolCallCompleted {
+                    agent_role,
+                    tool_name,
+                    success,
+                    duration_ms,
+                    ..
+                } => {
+                    println!(
+                        "📋 [{agent_role}] Tool Completada: `{tool_name}` en {duration_ms}ms (Éxito: {success})\n"
+                    );
                 }
-                AgentEvent::ReviewOutcome { approved, score, feedback } => {
+                AgentEvent::ReviewOutcome {
+                    approved,
+                    score,
+                    feedback,
+                } => {
                     println!("⚖️  [CONSENSO & AUDITORÍA]");
-                    println!("   Aprobado: {approved} | Calidad: {score:.2} | Veredicto: {feedback}\n");
+                    println!(
+                        "   Aprobado: {approved} | Calidad: {score:.2} | Veredicto: {feedback}\n"
+                    );
                 }
-                AgentEvent::TaskStatusChanged { task_id, role, status } => {
+                AgentEvent::TaskStatusChanged {
+                    task_id,
+                    role,
+                    status,
+                } => {
                     println!("📌 [DAG TASK] {task_id} ({role}) -> {status}");
                 }
-                AgentEvent::WorkflowCompleted { total_duration_ms, .. } => {
+                AgentEvent::WorkflowCompleted {
+                    total_duration_ms, ..
+                } => {
                     println!("\n✅ [WORKFLOW COMPLETADO] Tiempo total: {total_duration_ms}ms\n");
                 }
                 _ => {}

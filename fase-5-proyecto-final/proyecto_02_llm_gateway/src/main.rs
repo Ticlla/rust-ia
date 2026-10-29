@@ -1,16 +1,16 @@
 //! Entrypoint del Servidor LLM Serving Gateway con Soporte para Pesos Reales SmolLM2-135M
 
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::llama::{Cache, Config as LlamaConfig, Llama};
-use proyecto_02_llm_gateway::api::handlers::{build_router, AppState};
+use proyecto_02_llm_gateway::api::handlers::{AppState, build_router};
 use proyecto_02_llm_gateway::api::openai_types::{
     ChatChoice, ChatCompletionRequest, ChatCompletionResponse, ChatMessage, ModelCard,
     ModelListResponse, UsageInfo,
@@ -25,7 +25,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokenizers::Tokenizer;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use uuid::Uuid;
 
 struct RealServerState {
@@ -75,9 +75,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         println!("[1] Mapeando pesos Safetensors (257 MB) con Zero-Copy (mmap)...");
         let start_load = Instant::now();
-        let vb = unsafe { VarBuilder::from_mmaped_safetensors(&[&weights_path], DType::F32, &dev)? };
+        let vb =
+            unsafe { VarBuilder::from_mmaped_safetensors(&[&weights_path], DType::F32, &dev)? };
         let model = Arc::new(Llama::load(vb, &llama_config)?);
-        println!("    -> ¡Modelo cargado en {:.2} ms!", start_load.elapsed().as_secs_f64() * 1000.0);
+        println!(
+            "    -> ¡Modelo cargado en {:.2} ms!",
+            start_load.elapsed().as_secs_f64() * 1000.0
+        );
 
         println!("[2] Cargando tokenizador BPE Hugging Face (49,152 tokens)...");
         let tokenizer = Tokenizer::from_file(&tokenizer_path).map_err(|e| e.to_string())?;
@@ -96,7 +100,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .route("/v1/chat/completions", post(real_chat_handler))
             .with_state(server_state);
 
-        println!("\n[3] Gateway Real OpenAI-Compatible activo en: http://{}", addr);
+        println!(
+            "\n[3] Gateway Real OpenAI-Compatible activo en: http://{}",
+            addr
+        );
         println!("    - GET  /health               -> Monitor de salud del modelo");
         println!("    - GET  /v1/models            -> Especificación de modelos cargados");
         println!("    - POST /v1/chat/completions  -> Inferencia real con SmolLM2");
@@ -228,14 +235,19 @@ async fn real_chat_handler(
 ) -> Result<Response, (StatusCode, String)> {
     let mut prompt = String::new();
     for msg in &payload.messages {
-        prompt.push_str(&format!("<|im_start|>{}\n{}<|im_end|>\n", msg.role, msg.content));
+        prompt.push_str(&format!(
+            "<|im_start|>{}\n{}<|im_end|>\n",
+            msg.role, msg.content
+        ));
     }
     prompt.push_str("<|im_start|>assistant\n");
 
-    let encoded = state
-        .tokenizer
-        .encode(prompt.as_str(), true)
-        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Error de tokenización: {e}")))?;
+    let encoded = state.tokenizer.encode(prompt.as_str(), true).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            format!("Error de tokenización: {e}"),
+        )
+    })?;
     let prompt_ids = encoded.get_ids().to_vec();
     let prompt_len = prompt_ids.len();
 
@@ -295,11 +307,23 @@ async fn real_chat_handler(
             next_token = sample_token(&token_logits, temperature).map_err(|e| e.to_string())?;
         }
 
-        tokenizer.decode(&generated_ids, false).map_err(|e| e.to_string())
+        tokenizer
+            .decode(&generated_ids, false)
+            .map_err(|e| e.to_string())
     })
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en join: {e}")))?
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error en inferencia: {e}")))?;
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error en join: {e}"),
+        )
+    })?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Error en inferencia: {e}"),
+        )
+    })?;
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)

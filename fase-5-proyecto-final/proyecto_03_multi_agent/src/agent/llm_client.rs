@@ -15,10 +15,7 @@ pub enum LlmDecision {
         arguments: serde_json::Value,
     },
     /// El agente ha completado su razonamiento y emite su respuesta o entrega final.
-    FinalAnswer {
-        thought: String,
-        answer: String,
-    },
+    FinalAnswer { thought: String, answer: String },
 }
 
 /// Contrato para el backend de lenguaje (LLM).
@@ -68,7 +65,12 @@ impl LlmBackend for DeterministicLlmBackend {
                         // Extraer posible subcadena de cálculo
                         let expr = last_message
                             .split_whitespace()
-                            .find(|w| w.contains('+') || w.contains('*') || w.contains('/') || w.contains('-'))
+                            .find(|w| {
+                                w.contains('+')
+                                    || w.contains('*')
+                                    || w.contains('/')
+                                    || w.contains('-')
+                            })
                             .unwrap_or("128 * 16");
 
                         Ok(LlmDecision::ToolCall {
@@ -446,7 +448,12 @@ impl LlmBackend for GatewayLlmBackend {
             .json(&payload)
             .send()
             .await
-            .map_err(|e| format!("Fallo al conectar con LLM Gateway en '{}': {e}", self.endpoint))?;
+            .map_err(|e| {
+                format!(
+                    "Fallo al conectar con LLM Gateway en '{}': {e}",
+                    self.endpoint
+                )
+            })?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -461,7 +468,10 @@ impl LlmBackend for GatewayLlmBackend {
 
         let raw_text = body["choices"][0]["message"]["content"]
             .as_str()
-            .ok_or_else(|| "El payload de respuesta del Gateway no contiene 'choices[0].message.content'".to_string())?;
+            .ok_or_else(|| {
+                "El payload de respuesta del Gateway no contiene 'choices[0].message.content'"
+                    .to_string()
+            })?;
 
         // Parsear formato ReAct
         if raw_text.contains("Action:") && raw_text.contains("Arguments:") {
@@ -484,7 +494,11 @@ impl LlmBackend for GatewayLlmBackend {
                 .unwrap_or_else(|_| serde_json::json!({ "raw": arguments_str }));
 
             Ok(LlmDecision::ToolCall {
-                thought: if thought.is_empty() { "Invocando herramienta requerida.".into() } else { thought },
+                thought: if thought.is_empty() {
+                    "Invocando herramienta requerida.".into()
+                } else {
+                    thought
+                },
                 tool_name,
                 arguments,
             })
@@ -499,7 +513,11 @@ impl LlmBackend for GatewayLlmBackend {
             let answer = raw_text[idx + "Final Answer:".len()..].trim().to_string();
 
             Ok(LlmDecision::FinalAnswer {
-                thought: if thought.is_empty() { "Razonamiento completado.".into() } else { thought },
+                thought: if thought.is_empty() {
+                    "Razonamiento completado.".into()
+                } else {
+                    thought
+                },
                 answer,
             })
         } else {

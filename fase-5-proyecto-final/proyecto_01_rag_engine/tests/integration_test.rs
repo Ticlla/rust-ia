@@ -1,9 +1,9 @@
 //! Pruebas de Integración de Extremo a Extremo para Enterprise Hybrid RAG Engine
 
-use axum::body::{to_bytes, Body};
+use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode};
 use candle_core::Device;
-use proyecto_01_rag_engine::api::handlers::{build_router, AppState};
+use proyecto_01_rag_engine::api::handlers::{AppState, build_router};
 use proyecto_01_rag_engine::api::models::{HealthResponse, SearchRequest, SearchResponse};
 use proyecto_01_rag_engine::config::RagConfig;
 use proyecto_01_rag_engine::engine::{EnterpriseRagEngine, SearchMode};
@@ -68,7 +68,9 @@ fn test_dense_semantic_search() {
     ];
     engine.ingest_documents(docs).unwrap();
 
-    let hits = engine.search("sistemas en paralelo", 5, SearchMode::Dense).unwrap();
+    let hits = engine
+        .search("sistemas en paralelo", 5, SearchMode::Dense)
+        .unwrap();
     assert!(!hits.is_empty(), "Debe encontrar resultados semánticos");
     assert_eq!(hits[0].doc_id, "doc_concurrency");
 }
@@ -91,7 +93,9 @@ fn test_hybrid_rrf_and_reranking() {
     engine.ingest_documents(docs).unwrap();
 
     // Búsqueda Híbrida
-    let hits_hybrid = engine.search("sistemas RAG y búsqueda", 5, SearchMode::Hybrid).unwrap();
+    let hits_hybrid = engine
+        .search("sistemas RAG y búsqueda", 5, SearchMode::Hybrid)
+        .unwrap();
     assert!(!hits_hybrid.is_empty());
     assert!(hits_hybrid[0].rrf_score.is_some());
 

@@ -1,8 +1,8 @@
 //! Tokenizador para el Gateway de Inferencia
 
+use tokenizers::Tokenizer;
 use tokenizers::models::wordlevel::WordLevel;
 use tokenizers::pre_tokenizers::whitespace::Whitespace;
-use tokenizers::Tokenizer;
 
 #[derive(Clone)]
 pub struct GatewayTokenizer {
@@ -62,10 +62,7 @@ impl GatewayTokenizer {
     }
 
     pub fn encode(&self, text: &str) -> Result<Vec<u32>, String> {
-        let encoding = self
-            .inner
-            .encode(text, false)
-            .map_err(|e| e.to_string())?;
+        let encoding = self.inner.encode(text, false).map_err(|e| e.to_string())?;
         Ok(encoding.get_ids().to_vec())
     }
 
