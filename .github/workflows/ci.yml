@@ -1,0 +1,99 @@
+name: "Rust AI Microservices CI/CD"
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ==============================================================================
+  # Job 1: Quality Assurance (Fmt, Clippy, Tests)
+  # ==============================================================================
+  quality-check:
+    name: "Code Quality & Workspace Tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            fase-5-proyecto-final -> target
+
+      - name: Verify Code Formatting (rustfmt)
+        run: |
+          cargo fmt --manifest-path fase-5-proyecto-final/Cargo.toml --all -- --check
+
+      - name: Lint Code with Clippy
+        run: |
+          cargo clippy --manifest-path fase-5-proyecto-final/Cargo.toml --workspace --all-targets
+
+      - name: Run All Workspace Tests (Unit & Integration)
+        run: |
+          cargo test --manifest-path fase-5-proyecto-final/Cargo.toml --workspace --verbose
+
+  # ==============================================================================
+  # Job 2: Multi-Stage Docker Container Build & Validation (cargo-chef)
+  # ==============================================================================
+  docker-build:
+    name: "Docker Container Verification (cargo-chef)"
+    needs: quality-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build RAG Engine Image (Dockerfile.chef)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./fase-5-proyecto-final
+          file: ./fase-6-cloud-infrastructure/docker/Dockerfile.chef
+          push: false
+          tags: ai-stack/rag-engine:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build LLM Gateway Image (Dockerfile.gateway)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./fase-5-proyecto-final
+          file: ./fase-6-cloud-infrastructure/docker/Dockerfile.gateway
+          push: false
+          tags: ai-stack/llm-gateway:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==============================================================================
+  # Job 3: Security & Dependency Vulnerability Audit
+  # ==============================================================================
+  security-audit:
+    name: "Security Audit (Cargo Audit)"
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Cargo Audit
+        uses: rustsec/audit-check@v1.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
