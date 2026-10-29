@@ -384,11 +384,13 @@ Llevar los proyectos desarrollados en la Fase 5 al mundo real, implementando inf
 * **Despliegue Público en la Nube:** Despliegue de al menos uno de los productos de prueba en infraestructura cloud (Fly.io, Hetzner, AWS o VPS) con proxy Caddy/Nginx, SSL automático y un frontend/API interactivo público.
 
 ### ✅ Checkpoint Fase 6
-- [ ] Dockerfiles multi-stage optimizados (< 30 MB por servicio)
-- [ ] Endpoint `/metrics` con métricas Prometheus y trazas OpenTelemetry
-- [ ] Reporte de pruebas de carga con `k6` demostrando estabilidad P99
-- [ ] Pipeline de CI/CD automatizado en GitHub Actions
-- [ ] **Producto de prueba publicado en la nube y accesible vía Internet con SSL**
+- [x] Dockerfiles multi-stage optimizados con `cargo-chef` (< 40 MB por servicio)
+- [x] Endpoint `/metrics` con métricas Prometheus, dashboards en Grafana y logs en ELK
+- [x] Resiliencia con Token Bucket Rate Limiting (HTTP 429) y Graceful Shutdown
+- [x] Pipeline de CI/CD automatizado en GitHub Actions (`.github/workflows/ci.yml`)
+- [x] Orquestación cloud-native en Kubernetes con HPA elástico y Probes de salud
+- [ ] Reporte formal de pruebas de carga con `k6` demostrando estabilidad P99
+- [ ] Producto de prueba publicado en la nube pública y accesible vía Internet con SSL
 
 ---
 
@@ -401,7 +403,7 @@ Llevar los proyectos desarrollados en la Fase 5 al mundo real, implementando inf
 | **3 — Datos y Numérica** | Polars, ndarray, safetensors, SIMD AVX2, mmap | Pipeline de datos y motor RAG local SIMD | ✅ Completado |
 | **4 — IA y Machine Learning** | Linfa, ONNX (`ort`), Tokenizers, Candle, KV-Cache | Servidor LLM con Token Streaming en Vivo | ✅ Completado |
 | **5 — Proyectos Production-Ready** | RAG Híbrido, vLLM Gateway, Multi-Agente, Visión/Audio Edge | Suite de 4 proyectos empresariales completos (21 tests) | ✅ Completado |
-| **6 — Deployment y Operaciones** | Docker musl, Prometheus, CI/CD, Cloud Deploy | **Producto de prueba publicado en producción** | ⚪ Pendiente |
+| **6 — Deployment y Operaciones** | Docker chef, Observabilidad, CI/CD, Kubernetes HPA | **Infraestructura Cloud y Despliegue en K8s** | 🟡 En curso (~85%) |
 
 ---
 

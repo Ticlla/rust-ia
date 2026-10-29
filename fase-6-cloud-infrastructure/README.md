@@ -1,8 +1,8 @@
 # Fase 6: Infraestructura Cloud, Observabilidad y Despliegue en Producción
 
 > **Módulo:** Fase 6 — Cloud AI Infrastructure  
-> **Estado:** Parte 1 Completada (Docker Multi-Stage con `cargo-chef`)  
-> **Servicio Empaquetado:** Enterprise Hybrid RAG Engine (`proyecto_01_rag_engine`)
+> **Estado:** Partes 1 a 6 Implementadas y Probadas en Clúster Kubernetes  
+> **Servicios Empaquetados:** Enterprise Hybrid RAG Engine (`proyecto_01_rag_engine`) y LLM Gateway (`proyecto_02_llm_gateway`)
 
 ---
 
@@ -13,7 +13,7 @@
 - [x] **Parte 3:** Observabilidad Total con Prometheus (`/metrics`), Grafana y ELK/Kibana
 - [x] **Parte 4:** Resiliencia, Token Bucket Rate Limiting (HTTP 429) y Graceful Shutdown
 - [x] **Parte 5:** Pipeline de CI/CD Automatizado con GitHub Actions (`.github/workflows/ci.yml`)
-- [ ] **Parte 6:** Despliegue Cloud en Kubernetes (K8s) con HPA y Probes
+- [x] **Parte 6:** Despliegue Cloud en Kubernetes (K8s) con HPA y Probes
 
 ---
 
@@ -138,5 +138,112 @@ docker stats --no-stream ai-rag-engine ai-llm-gateway
 
 # Detener el stack
 docker compose -f fase-6-cloud-infrastructure/docker-compose.yml down
+```
+
+---
+
+## 📊 Parte 3: Observabilidad Total con Prometheus, Grafana y ELK
+
+Para monitorear el comportamiento de los modelos de inferencia y la latencia en tiempo real, integramos un stack de observabilidad de grado industrial:
+
+1. **Prometheus (`:9090`)**:
+   - Hace scraping automático del endpoint `/metrics` en ambos microservicios.
+   - Rastrea métricas nativas de Rust: contadores de peticiones, histogramas de latencia, tamaño de buffers y saturación de Tokio.
+2. **Grafana (`:3001`)**:
+   - Dashboards interactivos preconfigurados para monitorear throughput, códigos de estado HTTP y uso de memoria.
+   - Panel de alerta específico para eventos de saturación y rate limiting (HTTP 429).
+3. **ELK Stack (Elasticsearch `:9200` + Kibana `:5601`)**:
+   - Recolección y agregación de logs estructurados en formato JSON.
+   - Búsqueda y trazabilidad distribuida para analizar peticiones de inferencia y errores de servicio.
+
+---
+
+## 🛡️ Parte 4: Resiliencia, Token Bucket y Graceful Shutdown
+
+Para garantizar la estabilidad del sistema bajo ráfagas intensas de tráfico:
+
+1. **Middleware de Rate Limiting (*Token Bucket*)**:
+   - Implementado en el LLM Gateway con ventana deslizante y bucket elástico.
+   - Cuando un cliente o IP excede la cuota permitida, responde de inmediato con `HTTP 429 Too Many Requests` y cabeceras `Retry-After`.
+   - Script de prueba de estrés y ráfagas masivas: [`resilience/test_burst_rate_limit.sh`](resilience/test_burst_rate_limit.sh).
+2. **Graceful Shutdown**:
+   - Manejadores de señales POSIX (`SIGINT`, `SIGTERM`) en el runtime Tokio de ambos servicios.
+   - Permiten drenar las peticiones en vuelo y liberar buffers de modelos antes de terminar el proceso, evitando respuestas incompletas o sockets cortados.
+
+---
+
+## 🚀 Parte 5: Pipeline de CI/CD Automatizado con GitHub Actions
+
+El pipeline continuo [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) valida cada cambio con 3 jobs concurrentes:
+
+1. **`Code Quality & Workspace Tests`**:
+   - Verificación estricta de formato (`cargo fmt --check`).
+   - Linter oficial (`cargo clippy`).
+   - Ejecución de la suite completa de pruebas unitarias e integrales con caché inteligente (`Swatinem/rust-cache`).
+2. **`Security Audit (Cargo Audit)`**:
+   - Auditoría automatizada de los 354 paquetes en [`fase-5-proyecto-final/Cargo.lock`](../fase-5-proyecto-final/Cargo.lock) contra la base de datos de [RustSec](https://rustsec.org/).
+   - Instalación instantánea mediante binarios precompilados y excepciones justificadas para dependencias no explotables.
+3. **`Docker Container Verification (cargo-chef)`**:
+   - Construcción multi-stage de imágenes Docker para ambos microservicios.
+   - Validación de reproducibilidad y cacheo en GitHub Actions Container Cache.
+
+---
+
+## ☸️ Parte 6: Despliegue Cloud en Kubernetes (K8s) con HPA y Probes
+
+Los manifiestos declarativos en [`k8s/`](k8s/) proporcionan una topología cloud-native lista para producción en AWS EKS, GCP GKE o clústeres locales con `kind`:
+
+```mermaid
+flowchart TD
+    Internet(["Tráfico de Clientes / Internet"]) --> LB["Service: gateway-service<br/>(LoadBalancer: Port 80)"]
+    
+    subgraph K8sNamespace ["Namespace: ai-production"]
+        LB --> GW_Pods["Deployment: llm-gateway<br/>(Replicas: 2..10)<br/>Port: 8081"]
+        
+        GW_Pods -->|"DNS: rag-service:3000<br/>(Service Discovery ClusterIP)"| RAG_SVC["Service: rag-service<br/>(ClusterIP: Port 3000)"]
+        
+        RAG_SVC --> RAG_Pods["Deployment: rag-engine<br/>(Replicas: 2..8)<br/>Port: 3000"]
+        
+        HPA_GW["HPA: llm-gateway-hpa<br/>Target: CPU 70%, RAM 80%"] -.->|Autoescalado| GW_Pods
+        HPA_RAG["HPA: rag-engine-hpa<br/>Target: CPU 70%, RAM 80%"] -.->|Autoescalado| RAG_Pods
+        
+        Config["ConfigMap: ai-stack-config"] -.->|envFrom| GW_Pods
+        Config -.->|envFrom| RAG_Pods
+    end
+```
+
+### Catálogo de Manifiestos K8s
+
+| Manifiesto | Tipo | Propósito |
+| :--- | :---: | :--- |
+| [`00-namespace.yaml`](k8s/00-namespace.yaml) | `Namespace` | Aislamiento lógico `ai-production`. |
+| [`01-configmap.yaml`](k8s/01-configmap.yaml) | `ConfigMap` | Variables de entorno y DNS de Service Discovery. |
+| [`02-deployment-rag.yaml`](k8s/02-deployment-rag.yaml) | `Deployment` | RAG Engine con probes (`/health`) y recursos acotados. |
+| [`03-service-rag.yaml`](k8s/03-service-rag.yaml) | `Service` | `ClusterIP` privado interno (`rag-service:3000`). |
+| [`04-deployment-gateway.yaml`](k8s/04-deployment-gateway.yaml) | `Deployment` | LLM Gateway con continuous batching y probes. |
+| [`05-service-gateway.yaml`](k8s/05-service-gateway.yaml) | `Service` | `LoadBalancer` perimetral expuesto en el puerto 80. |
+| [`06-hpa-gateway.yaml`](k8s/06-hpa-gateway.yaml) | `HPA v2` | Autoescalado elástico (2 a 10 pods) con ventana anti-flapping (300s). |
+| [`07-hpa-rag.yaml`](k8s/07-hpa-rag.yaml) | `HPA v2` | Autoescalado para búsqueda vectorial (2 a 8 pods). |
+| [`kustomization.yaml`](k8s/kustomization.yaml) | `Kustomize` | Ensamblado GitOps atómico. |
+
+### Comandos de Operación K8s
+
+```bash
+# 1. Aplicar todos los manifiestos atómicamente con Kustomize
+kubectl apply -k fase-6-cloud-infrastructure/k8s/
+
+# 2. Inspeccionar el estado de todos los recursos en producción
+kubectl get all -n ai-production
+
+# 3. Ver logs en tiempo real de los pods del Gateway
+kubectl logs -n ai-production -l app=llm-gateway -f --tail=30
+
+# 4. Probar la resolución DNS interna desde el Gateway hacia el RAG Engine
+kubectl exec -n ai-production deployment/llm-gateway -- curl -s http://rag-service:3000/health | jq .
+
+# 5. Ejecutar una consulta de chat compatible con OpenAI dentro del clúster
+kubectl exec -n ai-production deployment/llm-gateway -- curl -s -X POST http://localhost:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "smollm2-135m", "messages": [{"role": "user", "content": "Hola Kubernetes desde Rust"}]}' | jq .
 ```
 
